@@ -4,7 +4,7 @@ ErrorHandler 综合测试用例
 import time
 
 import pytest
-from flowforge import Flow, Routine2, ErrorHandler, ErrorStrategy
+from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
 class TestErrorHandlerStrategies:
     """错误处理策略测试"""
     
@@ -12,7 +12,7 @@ class TestErrorHandlerStrategies:
         """测试 STOP 策略"""
         flow = Flow()
         
-        class FailingRoutine(Routine2):
+        class FailingRoutine(Routine):
             def __call__(self):
                 raise ValueError("Test error")
         
@@ -31,7 +31,7 @@ class TestErrorHandlerStrategies:
         """测试 CONTINUE 策略"""
         flow = Flow()
         
-        class FailingRoutine(Routine2):
+        class FailingRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -57,7 +57,7 @@ class TestErrorHandlerStrategies:
         flow = Flow()
         call_count = [0]
         
-        class RetryRoutine(Routine2):
+        class RetryRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -89,7 +89,7 @@ class TestErrorHandlerStrategies:
         flow = Flow()
         call_count = [0]
         
-        class AlwaysFailingRoutine(Routine2):
+        class AlwaysFailingRoutine(Routine):
             def __call__(self):
                 call_count[0] += 1
                 raise ValueError(f"Test error (attempt {call_count[0]})")
@@ -107,14 +107,19 @@ class TestErrorHandlerStrategies:
         job_state = flow.execute(routine_id)
         
         assert job_state.status == "failed"
-        assert call_count[0] == 3  # 初始 + 2次重试
+        # 初始调用 1 次 + 重试 2 次 = 3 次
+        assert call_count[0] == 3
+        # retry_count 应该等于 max_retries（初始错误调用 1 次 handle_error + 每次重试失败调用 1 次）
+        # 第一次错误: retry_count = 1
+        # 第一次重试失败: retry_count = 2
+        # 所以最终 retry_count = 2
         assert error_handler.retry_count == 2
     
     def test_skip_strategy(self):
         """测试 SKIP 策略"""
         flow = Flow()
         
-        class FailingRoutine(Routine2):
+        class FailingRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -187,7 +192,7 @@ class TestErrorHandlerContext:
         """测试带上下文的错误处理"""
         flow = Flow()
         
-        class FailingRoutine(Routine2):
+        class FailingRoutine(Routine):
             def __call__(self):
                 raise ValueError("Test error")
         

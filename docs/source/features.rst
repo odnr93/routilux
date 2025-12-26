@@ -6,7 +6,7 @@ This document provides a comprehensive overview of flowforge features.
 Core Features
 ------------
 
-Routine2 Base Class
+Routine Base Class
 ~~~~~~~~~~~~~~~~~~~
 
 * ✅ Support for defining 0-N slots (input slots)

@@ -8,7 +8,7 @@ import uuid
 from typing import Dict, Optional, Any, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from flowforge.routine import Routine2
+    from flowforge.routine import Routine
     from flowforge.connection import Connection
     from flowforge.job_state import JobState
     from flowforge.event import Event
@@ -46,7 +46,7 @@ class Flow(Serializable):
         """
         super().__init__()
         self.flow_id: str = flow_id or str(uuid.uuid4())
-        self.routines: Dict[str, 'Routine2'] = {}  # routine_id -> Routine2
+        self.routines: Dict[str, 'Routine'] = {}  # routine_id -> Routine
         self.connections: List['Connection'] = []  # 连接列表
         self.job_state: Optional['JobState'] = None  # 当前作业状态
         self._current_flow: Optional['Flow'] = None  # 当前执行的 flow（用于上下文）
@@ -82,12 +82,12 @@ class Flow(Serializable):
         key = (event, slot)
         return self._event_slot_connections.get(key)
     
-    def add_routine(self, routine: 'Routine2', routine_id: Optional[str] = None) -> str:
+    def add_routine(self, routine: 'Routine', routine_id: Optional[str] = None) -> str:
         """
         添加一个 routine 到 flow
         
         Args:
-            routine: Routine2 对象
+            routine: Routine 对象
             routine_id: Routine ID（如果为 None 则使用 routine._id）
         
         Returns:
@@ -281,17 +281,27 @@ class Flow(Serializable):
                 
                 # 如果是重试策略
                 if should_continue and self.error_handler.strategy.value == "retry":
-                    # 重试逻辑
+                    # 重试逻辑（handle_error 已经增加了 retry_count，这里继续重试）
+                    # max_retries 表示最大重试次数，所以总共尝试次数 = 1 + max_retries
                     retry_success = False
-                    for attempt in range(self.error_handler.max_retries):
+                    # 已经尝试了 1 次（初始调用），还需要重试 max_retries 次
+                    remaining_retries = self.error_handler.max_retries
+                    for attempt in range(remaining_retries):
                         try:
                             entry_routine(**entry_params)
                             retry_success = True
                             break
                         except Exception as retry_error:
-                            if attempt < self.error_handler.max_retries - 1:
-                                continue
+                            # 每次重试失败时，再次调用 handle_error 来更新 retry_count
+                            if attempt < remaining_retries - 1:
+                                should_continue_retry = self.error_handler.handle_error(
+                                    retry_error, entry_routine, entry_routine_id, self
+                                )
+                                if not should_continue_retry:
+                                    e = retry_error
+                                    break
                             else:
+                                # 最后一次重试失败
                                 e = retry_error
                                 break
                     
@@ -549,10 +559,10 @@ class Flow(Serializable):
                     routine.deserialize(routine_data)
                     self.routines[routine_id] = routine
                 else:
-                    # 如果无法加载类，创建一个基本的 Routine2 实例
+                    # 如果无法加载类，创建一个基本的 Routine 实例
                     # 但仍然尝试恢复 slots 和 events
-                    from flowforge.routine import Routine2
-                    routine = Routine2()
+                    from flowforge.routine import Routine
+                    routine = Routine()
                     routine._id = routine_data.get("_id", routine_id)
                     routine._stats = routine_data.get("_stats", {})
                     # 恢复 slots 和 events 的基本结构

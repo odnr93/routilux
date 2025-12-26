@@ -3,6 +3,7 @@
 运行所有测试的脚本
 """
 import os
+import sys
 import subprocess
 
 

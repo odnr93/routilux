@@ -13,7 +13,7 @@ Connections are typically created through Flow's connect method:
    connection = flow.connect(
        source_routine_id="routine1",
        source_event="output",
-       target_routine_id="routine2",
+       target_routine_id="routine",
        target_slot="input"
    )
 
@@ -36,7 +36,7 @@ Parameter mapping allows you to transform parameter names when data flows throug
    event = routine1.define_event("output", ["source_param"])
    
    # Target slot expects "target_param"
-   slot = routine2.define_slot("input", handler=lambda target_param: ...)
+   slot = routine.define_slot("input", handler=lambda target_param: ...)
    
    # Map source_param to target_param
    connection = Connection(

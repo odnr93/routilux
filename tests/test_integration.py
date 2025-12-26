@@ -3,7 +3,7 @@
 """
 
 import pytest
-from flowforge import Flow, Routine2
+from flowforge import Flow, Routine
 class TestCompleteFlow:
     """完整流程测试"""
     
@@ -12,7 +12,7 @@ class TestCompleteFlow:
         flow = Flow()
         results = []
         
-        class InputProcessor(Routine2):
+        class InputProcessor(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -22,7 +22,7 @@ class TestCompleteFlow:
                 self._stats["input_processed"] = True
                 self.emit("output", data=processed)
         
-        class Validator(Routine2):
+        class Validator(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.validate)
@@ -33,7 +33,7 @@ class TestCompleteFlow:
                     self._stats["validated"] = True
                     self.emit("output", data=data)
         
-        class Processor(Routine2):
+        class Processor(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -44,7 +44,7 @@ class TestCompleteFlow:
                 self._stats["processed"] = True
                 self.emit("output", data=result)
         
-        class OutputFormatter(Routine2):
+        class OutputFormatter(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.format)
@@ -85,7 +85,7 @@ class TestCompleteFlow:
         success_results = []
         error_results = []
         
-        class Processor(Routine2):
+        class Processor(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -97,7 +97,7 @@ class TestCompleteFlow:
                 else:
                     self.emit("output", data="success")
         
-        class SuccessHandler(Routine2):
+        class SuccessHandler(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.handle)
@@ -105,7 +105,7 @@ class TestCompleteFlow:
             def handle(self, data):
                 success_results.append(data)
         
-        class ErrorHandler(Routine2):
+        class ErrorHandler(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.handle)
@@ -140,7 +140,7 @@ class TestCompleteFlow:
         flow = Flow()
         aggregated_data = []
         
-        class SourceA(Routine2):
+        class SourceA(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -148,7 +148,7 @@ class TestCompleteFlow:
             def __call__(self):
                 self.emit("output", data="A")
         
-        class SourceB(Routine2):
+        class SourceB(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -156,7 +156,7 @@ class TestCompleteFlow:
             def __call__(self):
                 self.emit("output", data="B")
         
-        class SourceC(Routine2):
+        class SourceC(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -164,7 +164,7 @@ class TestCompleteFlow:
             def __call__(self):
                 self.emit("output", data="C")
         
-        class Aggregator(Routine2):
+        class Aggregator(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.aggregate, merge_strategy="append")
@@ -200,7 +200,7 @@ class TestComplexScenarios:
         """测试嵌套流程"""
         flow = Flow()
         
-        class RoutineA(Routine2):
+        class RoutineA(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -208,7 +208,7 @@ class TestComplexScenarios:
             def __call__(self):
                 self.emit("output", data="A")
         
-        class RoutineB(Routine2):
+        class RoutineB(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -217,7 +217,7 @@ class TestComplexScenarios:
             def process(self, data):
                 self.emit("output", data=f"B({data})")
         
-        class RoutineC(Routine2):
+        class RoutineC(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -226,7 +226,7 @@ class TestComplexScenarios:
             def process(self, data):
                 self.emit("output", data=f"C({data})")
         
-        class RoutineD(Routine2):
+        class RoutineD(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)

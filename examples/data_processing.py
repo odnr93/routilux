@@ -12,10 +12,10 @@ import os
 
 
 
-from flowforge import Flow, Routine2
+from flowforge import Flow, Routine
 
 
-class InputReader(Routine2):
+class InputReader(Routine):
     """Reads input data"""
     
     def __init__(self):
@@ -29,7 +29,7 @@ class InputReader(Routine2):
         self.emit("output", raw_data=raw_data)
 
 
-class DataValidator(Routine2):
+class DataValidator(Routine):
     """Validates input data"""
     
     def __init__(self):
@@ -53,7 +53,7 @@ class DataValidator(Routine2):
             self.emit("error", error_message="Invalid data")
 
 
-class DataTransformer(Routine2):
+class DataTransformer(Routine):
     """Transforms validated data"""
     
     def __init__(self):
@@ -73,7 +73,7 @@ class DataTransformer(Routine2):
         self.emit("output", transformed_data=transformed)
 
 
-class DataWriter(Routine2):
+class DataWriter(Routine):
     """Writes processed data"""
     
     def __init__(self):

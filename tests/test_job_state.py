@@ -90,7 +90,7 @@ class TestJobStateQuery:
         
         # 记录多条历史
         job_state.record_execution("routine1", "event1", {"data": 1})
-        job_state.record_execution("routine2", "event2", {"data": 2})
+        job_state.record_execution("routine", "event2", {"data": 2})
         job_state.record_execution("routine1", "event3", {"data": 3})
         
         # 查询所有历史
@@ -130,5 +130,5 @@ class TestJobStateStatus:
         assert job_state.current_routine_id == "routine1"
         
         # 更新当前 routine
-        job_state.current_routine_id = "routine2"
-        assert job_state.current_routine_id == "routine2"
+        job_state.current_routine_id = "routine"
+        assert job_state.current_routine_id == "routine"

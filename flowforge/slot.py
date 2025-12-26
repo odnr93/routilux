@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Callable, Optional, List, Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from flowforge.routine import Routine2
+    from flowforge.routine import Routine
     from flowforge.event import Event
 
 from flowforge.utils.serializable import register_serializable, Serializable
@@ -25,7 +25,7 @@ class Slot(Serializable):
     def __init__(
         self,
         name: str = "",
-        routine: Optional['Routine2'] = None,
+        routine: Optional['Routine'] = None,
         handler: Optional[Callable] = None,
         merge_strategy: str = "override"
     ):
@@ -34,13 +34,13 @@ class Slot(Serializable):
         
         Args:
             name: 插槽名称
-            routine: 所属的 Routine2 对象
+            routine: 所属的 Routine 对象
             handler: 处理函数
             merge_strategy: 合并策略 ("override", "append", 或自定义函数)
         """
         super().__init__()
         self.name: str = name
-        self.routine: 'Routine2' = routine
+        self.routine: 'Routine' = routine
         self.handler: Optional[Callable] = handler
         self.merge_strategy: Any = merge_strategy
         self.connected_events: List['Event'] = []  # 连接的 events

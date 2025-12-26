@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Event-driven workflow orchestration framework with flexible connection, state management, and workflow orchestration capabilities"
 readme = "README.md"
 requires-python = ">=3.7"
-license = {text = "Proprietary"}
+license = {text = "Apache-2.0"}
 authors = [
     {name = "FlowForge Team"}
 ]
@@ -16,6 +16,7 @@ keywords = ["workflow", "orchestration", "event-driven", "state-management", "fl
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",

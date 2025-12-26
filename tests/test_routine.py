@@ -1,24 +1,24 @@
 """
-Routine2 测试用例
+Routine 测试用例
 """
 import pytest
 
-from flowforge import Routine2
+from flowforge import Routine
 
 
-class TestRoutine2Basic:
-    """Routine2 基本功能测试"""
+class TestRoutineBasic:
+    """Routine 基本功能测试"""
     
     def test_create_routine(self):
-        """测试用例 1: 创建 Routine2 对象"""
-        routine = Routine2()
+        """测试用例 1: 创建 Routine 对象"""
+        routine = Routine()
         assert routine._id is not None
         assert isinstance(routine._stats, dict)
         assert len(routine._stats) == 0
     
     def test_define_slot(self):
         """测试用例 2: 定义 Slot"""
-        routine = Routine2()
+        routine = Routine()
         
         def handler(data):
             pass
@@ -31,7 +31,7 @@ class TestRoutine2Basic:
     
     def test_define_event(self):
         """测试用例 3: 定义 Event"""
-        routine = Routine2()
+        routine = Routine()
         
         event = routine.define_event("output", ["result", "status"])
         assert event.name == "output"
@@ -41,7 +41,7 @@ class TestRoutine2Basic:
     
     def test_emit_event(self):
         """测试用例 4: 触发 Event"""
-        routine = Routine2()
+        routine = Routine()
         
         # 定义事件
         event = routine.define_event("output", ["data"])
@@ -55,7 +55,7 @@ class TestRoutine2Basic:
     
     def test_stats_method(self):
         """测试用例 5: Stats 方法"""
-        routine = Routine2()
+        routine = Routine()
         
         # 初始状态为空
         stats = routine.stats()
@@ -76,12 +76,12 @@ class TestRoutine2Basic:
         assert "new_key" not in routine._stats
 
 
-class TestRoutine2EdgeCases:
-    """Routine2 边界情况测试"""
+class TestRoutineEdgeCases:
+    """Routine 边界情况测试"""
     
     def test_empty_routine(self):
         """测试用例 6: 空 Routine"""
-        routine = Routine2()
+        routine = Routine()
         
         # 没有 slots 和 events 的 routine 应该可以正常工作
         assert len(routine._slots) == 0
@@ -92,7 +92,7 @@ class TestRoutine2EdgeCases:
     
     def test_duplicate_slot_name(self):
         """测试用例 7: 重复定义 Slot"""
-        routine = Routine2()
+        routine = Routine()
         
         routine.define_slot("input")
         
@@ -102,7 +102,7 @@ class TestRoutine2EdgeCases:
     
     def test_duplicate_event_name(self):
         """测试用例 7: 重复定义 Event"""
-        routine = Routine2()
+        routine = Routine()
         
         routine.define_event("output")
         
@@ -111,12 +111,12 @@ class TestRoutine2EdgeCases:
             routine.define_event("output")
 
 
-class TestRoutine2Integration:
-    """Routine2 集成测试"""
+class TestRoutineIntegration:
+    """Routine 集成测试"""
     
     def test_routine_lifecycle(self):
         """测试 Routine 完整生命周期"""
-        routine = Routine2()
+        routine = Routine()
         
         # 1. 定义 slots 和 events
         received_data = []

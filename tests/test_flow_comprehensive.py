@@ -3,7 +3,7 @@ Flow 综合测试用例 - 补充缺失的功能测试
 """
 import json
 import pytest
-from flowforge import Flow, Routine2, ErrorHandler, ErrorStrategy, JobState
+from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy, JobState
 class TestFlowCancel:
     """Flow 取消功能测试"""
     
@@ -18,7 +18,7 @@ class TestFlowCancel:
         """测试取消正在执行的 job"""
         flow = Flow()
         
-        class LongRunningRoutine(Routine2):
+        class LongRunningRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -56,7 +56,7 @@ class TestFlowErrorHandler:
         """测试 STOP 策略"""
         flow = Flow()
         
-        class FailingRoutine(Routine2):
+        class FailingRoutine(Routine):
             def __call__(self):
                 raise ValueError("Test error")
         
@@ -74,7 +74,7 @@ class TestFlowErrorHandler:
         """测试 SKIP 策略"""
         flow = Flow()
         
-        class FailingRoutine(Routine2):
+        class FailingRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -82,7 +82,7 @@ class TestFlowErrorHandler:
             def __call__(self):
                 raise ValueError("Test error")
         
-        class SuccessRoutine(Routine2):
+        class SuccessRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -122,7 +122,7 @@ class TestFlowPauseResume:
         """测试带检查点的暂停"""
         flow = Flow()
         
-        class TestRoutine(Routine2):
+        class TestRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -150,7 +150,7 @@ class TestFlowPauseResume:
         """测试从暂停状态恢复"""
         flow = Flow()
         
-        class TestRoutine(Routine2):
+        class TestRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -183,14 +183,14 @@ class TestFlowFindConnection:
         """测试查找连接"""
         flow = Flow()
         
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["data"])
-        slot = routine2.define_slot("input")
+        slot = routine.define_slot("input")
         
         id1 = flow.add_routine(routine1, "routine1")
-        id2 = flow.add_routine(routine2, "routine2")
+        id2 = flow.add_routine(routine, "routine")
         
         # 连接
         connection = flow.connect(id1, "output", id2, "input")
@@ -204,11 +204,11 @@ class TestFlowFindConnection:
         """测试查找不存在的连接"""
         flow = Flow()
         
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["data"])
-        slot = routine2.define_slot("input")
+        slot = routine.define_slot("input")
         
         # 不创建连接，直接查找
         found_connection = flow._find_connection(event, slot)
@@ -233,7 +233,7 @@ class TestFlowSerializationEdgeCases:
         """测试序列化带 job_state 的 Flow"""
         flow = Flow(flow_id="test_flow")
         
-        routine = Routine2()
+        routine = Routine()
         routine_id = flow.add_routine(routine, "test")
         
         # 执行以创建 job_state
@@ -268,7 +268,7 @@ class TestFlowSerializationEdgeCases:
         """测试反序列化无效连接的 Flow"""
         flow = Flow()
         
-        routine = Routine2()
+        routine = Routine()
         routine_id = flow.add_routine(routine, "test")
         
         # 创建包含无效连接的数据
@@ -300,11 +300,11 @@ class TestFlowComplexScenarios:
         flow1 = Flow(flow_id="flow1")
         flow2 = Flow(flow_id="flow2")
         
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         id1 = flow1.add_routine(routine1, "r1")
-        id2 = flow2.add_routine(routine2, "r2")
+        id2 = flow2.add_routine(routine, "r2")
         
         # 两个 flow 应该独立
         assert flow1.flow_id == "flow1"
@@ -318,11 +318,11 @@ class TestFlowComplexScenarios:
         """测试包含嵌套 routine 的 Flow"""
         flow = Flow()
         
-        class ParentRoutine(Routine2):
+        class ParentRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
-                self.child_routine = Routine2()
+                self.child_routine = Routine()
             
             def __call__(self):
                 self.emit("output", data="parent")

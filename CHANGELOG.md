@@ -38,7 +38,7 @@
 
 ### 新增功能
 
-- ✅ **Routine2 基类**: 支持定义 slots 和 events，提供 stats() 方法
+- ✅ **Routine 基类**: 支持定义 slots 和 events，提供 stats() 方法
 - ✅ **Slot 类**: 输入插槽，支持连接多个 events，数据接收和处理
 - ✅ **Event 类**: 输出事件，支持连接多个 slots，事件触发
 - ✅ **Connection 类**: 连接对象，支持参数映射
@@ -51,7 +51,7 @@
 - ✅ **事件驱动执行**: 实现了事件驱动的执行机制
 - ✅ **参数映射**: 完善了 Connection 的参数映射功能
 - ✅ **智能参数匹配**: Slot.receive 现在可以智能匹配 handler 参数
-- ✅ **Flow 上下文**: Routine2.emit 可以自动获取 Flow 上下文
+- ✅ **Flow 上下文**: Routine.emit 可以自动获取 Flow 上下文
 
 ### 测试
 

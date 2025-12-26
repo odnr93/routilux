@@ -1,7 +1,7 @@
 """
 序列化工具函数
 
-用于处理 Routine2、Flow 等对象的序列化和反序列化。
+用于处理 Routine、Flow 等对象的序列化和反序列化。
 """
 import importlib
 import inspect
@@ -111,7 +111,7 @@ def get_routine_class_info(routine: Any) -> Dict[str, Any]:
     获取 Routine 的类信息
     
     Args:
-        routine: Routine2 实例
+        routine: Routine 实例
     
     Returns:
         包含类信息的字典

@@ -3,7 +3,7 @@ Flow 测试用例
 """
 
 import pytest
-from flowforge import Flow, Routine2
+from flowforge import Flow, Routine
 class TestFlowManagement:
     """Flow 管理测试"""
     
@@ -20,7 +20,7 @@ class TestFlowManagement:
     def test_add_routine(self):
         """测试用例 2: 添加 Routine"""
         flow = Flow()
-        routine = Routine2()
+        routine = Routine()
         
         # 添加 routine，使用自动生成的 id
         routine_id = flow.add_routine(routine)
@@ -29,8 +29,8 @@ class TestFlowManagement:
         assert flow.routines[routine_id] == routine
         
         # 添加 routine，使用指定的 id
-        routine2 = Routine2()
-        routine_id2 = flow.add_routine(routine2, routine_id="custom_id")
+        routine = Routine()
+        routine_id2 = flow.add_routine(routine, routine_id="custom_id")
         assert routine_id2 == "custom_id"
         assert "custom_id" in flow.routines
     
@@ -38,16 +38,16 @@ class TestFlowManagement:
         """测试用例 3: 连接 Routines"""
         flow = Flow()
         
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         # 定义 events 和 slots
         routine1.define_event("output", ["data"])
-        routine2.define_slot("input")
+        routine.define_slot("input")
         
         # 添加到 flow
         id1 = flow.add_routine(routine1, "routine1")
-        id2 = flow.add_routine(routine2, "routine2")
+        id2 = flow.add_routine(routine, "routine")
         
         # 连接
         connection = flow.connect(id1, "output", id2, "input")
@@ -66,11 +66,11 @@ class TestFlowManagement:
         """测试用例 3: 无效连接 - 不存在的 event"""
         flow = Flow()
         
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         id1 = flow.add_routine(routine1, "routine1")
-        id2 = flow.add_routine(routine2, "routine2")
+        id2 = flow.add_routine(routine, "routine")
         
         # 尝试连接不存在的 event 应该报错
         with pytest.raises(ValueError):
@@ -80,13 +80,13 @@ class TestFlowManagement:
         """测试用例 3: 无效连接 - 不存在的 slot"""
         flow = Flow()
         
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         routine1.define_event("output")
         
         id1 = flow.add_routine(routine1, "routine1")
-        id2 = flow.add_routine(routine2, "routine2")
+        id2 = flow.add_routine(routine, "routine")
         
         # 尝试连接不存在的 slot 应该报错
         with pytest.raises(ValueError):
@@ -98,7 +98,7 @@ class TestFlowExecution:
         """测试用例 4: 简单线性流程 A -> B -> C"""
         flow = Flow()
         
-        class RoutineA(Routine2):
+        class RoutineA(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -106,7 +106,7 @@ class TestFlowExecution:
             def __call__(self, data=None):
                 self.emit("output", data=data or "A")
         
-        class RoutineB(Routine2):
+        class RoutineB(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -115,7 +115,7 @@ class TestFlowExecution:
             def process(self, data):
                 self.emit("output", data=f"B({data})")
         
-        class RoutineC(Routine2):
+        class RoutineC(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -150,7 +150,7 @@ class TestFlowExecution:
         
         results = {}
         
-        class RoutineA(Routine2):
+        class RoutineA(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -158,7 +158,7 @@ class TestFlowExecution:
             def __call__(self, data=None):
                 self.emit("output", data=data or "A")
         
-        class RoutineB(Routine2):
+        class RoutineB(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -166,7 +166,7 @@ class TestFlowExecution:
             def process(self, data):
                 results["B"] = f"B({data})"
         
-        class RoutineC(Routine2):
+        class RoutineC(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -199,7 +199,7 @@ class TestFlowExecution:
         
         received_data = []
         
-        class RoutineA(Routine2):
+        class RoutineA(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -207,7 +207,7 @@ class TestFlowExecution:
             def __call__(self):
                 self.emit("output", data="A")
         
-        class RoutineB(Routine2):
+        class RoutineB(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -215,7 +215,7 @@ class TestFlowExecution:
             def __call__(self):
                 self.emit("output", data="B")
         
-        class RoutineC(Routine2):
+        class RoutineC(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process, merge_strategy="append")
@@ -254,7 +254,7 @@ class TestFlowExecution:
         """测试用例 9: 单个 Routine"""
         flow = Flow()
         
-        class SimpleRoutine(Routine2):
+        class SimpleRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.called = False
@@ -286,7 +286,7 @@ class TestFlowErrorHandling:
         """测试用例 11: Routine 执行异常"""
         flow = Flow()
         
-        class FailingRoutine(Routine2):
+        class FailingRoutine(Routine):
             def __call__(self):
                 raise ValueError("Test error")
         

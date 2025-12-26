@@ -9,7 +9,7 @@ Class Hierarchy
 .. code-block:: text
 
    Serializable (base)
-   ├── Routine2
+   ├── Routine
    ├── Flow
    ├── JobState
    │   └── ExecutionRecord
@@ -44,7 +44,7 @@ Connections support parameter mapping to transform parameter names:
    event = routine1.define_event("output", ["source_param"])
    
    # Target slot expects "target_param"
-   slot = routine2.define_slot("input", handler=lambda target_param: ...)
+   slot = routine.define_slot("input", handler=lambda target_param: ...)
    
    # Map source_param to target_param
    connection = Connection(
@@ -90,7 +90,7 @@ Serialization
 All core classes support serialization:
 
 * **Flow**: Serializes routines, connections, and state
-* **Routine2**: Serializes slots, events, and stats
+* **Routine**: Serializes slots, events, and stats
 * **JobState**: Serializes execution state and history
 * **Connection**: Serializes event-slot relationships and mappings
 

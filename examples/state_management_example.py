@@ -13,10 +13,10 @@ import json
 
 
 
-from flowforge import Flow, Routine2
+from flowforge import Flow, Routine
 
 
-class ProcessingRoutine(Routine2):
+class ProcessingRoutine(Routine):
     """A routine that processes data"""
     
     def __init__(self):

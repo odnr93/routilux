@@ -3,17 +3,17 @@ Connection 测试用例
 """
 import pytest
 
-from flowforge import Routine2, Connection
+from flowforge import Routine, Connection
 class TestConnectionCreation:
     """连接创建测试"""
     
     def test_create_connection(self):
         """测试用例 1: 创建连接"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["data"])
-        slot = routine2.define_slot("input")
+        slot = routine.define_slot("input")
         
         # 创建连接
         connection = Connection(event, slot)
@@ -24,11 +24,11 @@ class TestConnectionCreation:
     
     def test_create_connection_with_mapping(self):
         """测试用例 1: 创建带参数映射的连接"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["source_param"])
-        slot = routine2.define_slot("input")
+        slot = routine.define_slot("input")
         
         # 创建带参数映射的连接
         param_mapping = {"source_param": "target_param"}
@@ -49,11 +49,11 @@ class TestConnectionActivation:
             elif kwargs:
                 received_data.append(kwargs)
         
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["data"])
-        slot = routine2.define_slot("input", handler=handler)
+        slot = routine.define_slot("input", handler=handler)
         
         connection = Connection(event, slot)
         
@@ -76,11 +76,11 @@ class TestConnectionParamMapping:
             elif kwargs:
                 received_params.update(kwargs)
         
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["source_param"])
-        slot = routine2.define_slot("input", handler=handler)
+        slot = routine.define_slot("input", handler=handler)
         
         # 创建带参数映射的连接
         connection = Connection(
@@ -106,11 +106,11 @@ class TestConnectionParamMapping:
             if kwargs:
                 received_params.update(kwargs)
         
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["src1", "src2"])
-        slot = routine2.define_slot("input", handler=handler)
+        slot = routine.define_slot("input", handler=handler)
         
         # 创建带多个参数映射的连接
         connection = Connection(
@@ -139,11 +139,11 @@ class TestConnectionParamMapping:
             if kwargs:
                 received_params.update(kwargs)
         
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["src1", "src2"])
-        slot = routine2.define_slot("input", handler=handler)
+        slot = routine.define_slot("input", handler=handler)
         
         # 只映射部分参数
         connection = Connection(
@@ -167,11 +167,11 @@ class TestConnectionParamMapping:
             elif kwargs:
                 received_params.update(kwargs)
         
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["data"])
-        slot = routine2.define_slot("input", handler=handler)
+        slot = routine.define_slot("input", handler=handler)
         
         # 创建无参数映射的连接
         connection = Connection(event, slot)

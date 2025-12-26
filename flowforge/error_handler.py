@@ -11,7 +11,7 @@ import logging
 from flowforge.utils.serializable import register_serializable, Serializable
 
 if TYPE_CHECKING:
-    from flowforge.routine import Routine2
+    from flowforge.routine import Routine
     from flowforge.flow import Flow
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ class ErrorHandler(Serializable):
     def handle_error(
         self,
         error: Exception,
-        routine: 'Routine2',
+        routine: 'Routine',
         routine_id: str,
         flow: 'Flow',
         context: Optional[Dict[str, Any]] = None
@@ -137,4 +137,29 @@ class ErrorHandler(Serializable):
     def reset(self) -> None:
         """重置重试计数"""
         self.retry_count = 0
+    
+    def serialize(self) -> Dict[str, Any]:
+        """
+        序列化 ErrorHandler
+        
+        Returns:
+            序列化后的字典
+        """
+        data = super().serialize()
+        # ErrorStrategy 枚举需要转换为字符串
+        if isinstance(data.get("strategy"), ErrorStrategy):
+            data["strategy"] = data["strategy"].value
+        return data
+    
+    def deserialize(self, data: Dict[str, Any]) -> None:
+        """
+        反序列化 ErrorHandler
+        
+        Args:
+            data: 序列化数据
+        """
+        # ErrorStrategy 需要从字符串转换为枚举
+        if "strategy" in data and isinstance(data["strategy"], str):
+            data["strategy"] = ErrorStrategy(data["strategy"])
+        super().deserialize(data)
 

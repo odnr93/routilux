@@ -12,10 +12,10 @@ import os
 
 
 
-from flowforge import Flow, Routine2, ErrorHandler, ErrorStrategy
+from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
 
 
-class UnreliableRoutine(Routine2):
+class UnreliableRoutine(Routine):
     """A routine that may fail"""
     
     def __init__(self):
@@ -31,7 +31,7 @@ class UnreliableRoutine(Routine2):
         self.emit("output", data=f"Success after {self.call_count} attempts")
 
 
-class SuccessRoutine(Routine2):
+class SuccessRoutine(Routine):
     """A routine that always succeeds"""
     
     def __init__(self):
@@ -89,7 +89,7 @@ def test_continue_strategy():
     
     flow = Flow(flow_id="continue_test")
     
-    class FailingRoutine(Routine2):
+    class FailingRoutine(Routine):
         def __call__(self):
             raise ValueError("This will be logged but execution continues")
     
@@ -117,7 +117,7 @@ def test_skip_strategy():
     
     flow = Flow(flow_id="skip_test")
     
-    class FailingRoutine(Routine2):
+    class FailingRoutine(Routine):
         def __init__(self):
             super().__init__()
             self.output_event = self.define_event("output", ["data"])

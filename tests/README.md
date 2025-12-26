@@ -6,7 +6,7 @@
 tests/
 ├── __init__.py              # 测试包初始化
 ├── conftest.py              # pytest 配置和 fixtures
-├── test_routine.py          # Routine2 测试
+├── test_routine.py          # Routine 测试
 ├── test_slot.py             # Slot 测试
 ├── test_event.py            # Event 测试
 ├── test_connection.py       # Connection 测试
@@ -40,7 +40,7 @@ pytest tests/test_routine.py
 ### 运行特定测试用例
 
 ```bash
-pytest tests/test_routine.py::TestRoutine2Basic::test_create_routine
+pytest tests/test_routine.py::TestRoutineBasic::test_create_routine
 ```
 
 ### 生成覆盖率报告
@@ -74,7 +74,7 @@ pytest -s tests/
 ### 实现步骤
 
 1. **实现核心类**：
-   - `Routine2` (routine.py)
+   - `Routine` (routine.py)
    - `Slot` (slot.py)
    - `Event` (event.py)
    - `Connection` (connection.py)
@@ -95,7 +95,7 @@ pytest -s tests/
 ## 测试覆盖
 
 ### 单元测试
-- ✅ Routine2 基本功能
+- ✅ Routine 基本功能
 - ✅ Slot 连接和数据接收
 - ✅ Event 连接和触发
 - ✅ Connection 参数映射

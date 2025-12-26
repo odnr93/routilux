@@ -19,9 +19,9 @@ Let's create a simple routine that processes data:
 
 .. code-block:: python
 
-   from flowforge import Routine2
+   from flowforge import Routine
 
-   class DataProcessor(Routine2):
+   class DataProcessor(Routine):
        def __init__(self):
            super().__init__()
            # Define an input slot

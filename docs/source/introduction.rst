@@ -25,7 +25,7 @@ Architecture
 
 The framework consists of several core components:
 
-* **Routine2**: Base class for all routines, providing slot and event definitions
+* **Routine**: Base class for all routines, providing slot and event definitions
 * **Flow**: Manager for orchestrating multiple routines and their connections
 * **Event**: Output mechanism for routines to emit data
 * **Slot**: Input mechanism for routines to receive data

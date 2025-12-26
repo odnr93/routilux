@@ -39,6 +39,6 @@ After installation, verify the installation:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine2
+   from flowforge import Flow, Routine
    print("Installation successful!")
 

@@ -11,7 +11,7 @@ Test Structure
    tests/
    ├── __init__.py              # Test package initialization
    ├── conftest.py              # pytest configuration and fixtures
-   ├── test_routine.py          # Routine2 tests
+   ├── test_routine.py          # Routine tests
    ├── test_slot.py             # Slot tests
    ├── test_event.py            # Event tests
    ├── test_connection.py       # Connection tests
@@ -54,7 +54,7 @@ Run Specific Test Case
 
 .. code-block:: bash
 
-   pytest tests/test_routine.py::TestRoutine2Basic::test_create_routine
+   pytest tests/test_routine.py::TestRoutineBasic::test_create_routine
 
 Generate Coverage Report
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -69,7 +69,7 @@ Test Coverage
 Unit Tests
 ~~~~~~~~~~
 
-* ✅ Routine2 basic functionality
+* ✅ Routine basic functionality
 * ✅ Slot connection and data reception
 * ✅ Event connection and triggering
 * ✅ Connection parameter mapping

@@ -3,7 +3,8 @@
 """
 import pytest
 import json
-from flowforge import Flow, Routine2, JobState
+import os
+from flowforge import Flow, Routine, JobState
 from flowforge.utils.serializable import SerializableRegistry
 class TestFlowPersistence:
     """Flow 持久化测试"""
@@ -13,14 +14,14 @@ class TestFlowPersistence:
         flow = Flow(flow_id="test_flow")
         
         # 添加一些 routines
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         routine1.define_event("output", ["data"])
-        routine2.define_slot("input")
+        routine.define_slot("input")
         
         id1 = flow.add_routine(routine1, "routine1")
-        id2 = flow.add_routine(routine2, "routine2")
+        id2 = flow.add_routine(routine, "routine")
         
         # 连接
         flow.connect(id1, "output", id2, "input")
@@ -46,12 +47,12 @@ class TestFlowPersistence:
         """测试用例 2: 反序列化 Flow"""
         # 先创建一个 flow 并序列化
         flow1 = Flow(flow_id="test_flow")
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         routine1.define_event("output", ["data"])
-        routine2.define_slot("input")
+        routine.define_slot("input")
         id1 = flow1.add_routine(routine1, "routine1")
-        id2 = flow1.add_routine(routine2, "routine2")
+        id2 = flow1.add_routine(routine, "routine")
         flow1.connect(id1, "output", id2, "input")
         
         # 序列化并保存到文件
@@ -76,7 +77,7 @@ class TestFlowPersistence:
         # 创建 flow
         flow1 = Flow(flow_id="test_flow")
         
-        class TestRoutine(Routine2):
+        class TestRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])

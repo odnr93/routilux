@@ -3,17 +3,17 @@ Slot 测试用例
 """
 import pytest
 
-from flowforge import Routine2
+from flowforge import Routine
 class TestSlotConnection:
     """Slot 连接管理测试"""
     
     def test_connect_to_event(self):
         """测试用例 1: 连接到 Event"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["data"])
-        slot = routine2.define_slot("input")
+        slot = routine.define_slot("input")
         
         # 连接
         slot.connect(event)
@@ -24,11 +24,11 @@ class TestSlotConnection:
     
     def test_disconnect_from_event(self):
         """测试用例 2: 断开连接"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output")
-        slot = routine2.define_slot("input")
+        slot = routine.define_slot("input")
         
         # 连接
         slot.connect(event)
@@ -41,12 +41,12 @@ class TestSlotConnection:
     
     def test_multiple_events_to_slot(self):
         """测试用例 3: 多对多连接 - 一个 slot 连接多个 events"""
-        routine1 = Routine2()
-        routine2 = Routine2()
-        routine3 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
+        routine3 = Routine()
         
         event1 = routine1.define_event("output1")
-        event2 = routine2.define_event("output2")
+        event2 = routine.define_event("output2")
         slot = routine3.define_slot("input")
         
         # 连接多个 events
@@ -70,7 +70,7 @@ class TestSlotDataReceiving:
             else:
                 received_data.append({"data": data})
         
-        routine = Routine2()
+        routine = Routine()
         slot = routine.define_slot("input", handler=handler)
         
         # 接收数据
@@ -81,7 +81,7 @@ class TestSlotDataReceiving:
     
     def test_merge_strategy_override(self):
         """测试用例 5: 合并策略 - 覆盖"""
-        routine = Routine2()
+        routine = Routine()
         
         # 定义使用覆盖策略的 slot
         slot = routine.define_slot("input", merge_strategy="override")
@@ -95,7 +95,7 @@ class TestSlotDataReceiving:
     
     def test_merge_strategy_append(self):
         """测试用例 5: 合并策略 - 追加"""
-        routine = Routine2()
+        routine = Routine()
         
         # 定义使用追加策略的 slot
         slot = routine.define_slot("input", merge_strategy="append")
@@ -111,7 +111,7 @@ class TestSlotDataReceiving:
     
     def test_merge_strategy_custom(self):
         """测试用例 5: 合并策略 - 自定义"""
-        # routine = Routine2()
+        # routine = Routine()
         # 
         # # 定义使用自定义合并函数的 slot
         # def custom_merge(old, new):
@@ -132,7 +132,7 @@ class TestSlotDataReceiving:
         # def failing_handler(data):
         #     raise ValueError("Test error")
         # 
-        # routine = Routine2()
+        # routine = Routine()
         # slot = routine.define_slot("input", handler=failing_handler)
         # 
         # # 接收数据应该捕获异常，不中断流程
@@ -150,11 +150,11 @@ class TestSlotParamMapping:
         # def handler(mapped_param):
         #     received_params["mapped_param"] = mapped_param
         # 
-        # routine1 = Routine2()
-        # routine2 = Routine2()
+        # routine1 = Routine()
+        # routine = Routine()
         # 
         # event = routine1.define_event("output", ["original_param"])
-        # slot = routine2.define_slot("input", handler=handler)
+        # slot = routine.define_slot("input", handler=handler)
         # 
         # # 连接时指定参数映射
         # slot.connect(event, param_mapping={"original_param": "mapped_param"})

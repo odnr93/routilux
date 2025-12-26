@@ -55,7 +55,7 @@ Initial release with core functionality:
 New Features
 ~~~~~~~~~~~~
 
-* ✅ **Routine2 Base Class**: Supports defining slots and events, provides stats() method
+* ✅ **Routine Base Class**: Supports defining slots and events, provides stats() method
 * ✅ **Slot Class**: Input slot supporting connection to multiple events, data reception and processing
 * ✅ **Event Class**: Output event supporting connection to multiple slots, event triggering
 * ✅ **Connection Class**: Connection object supporting parameter mapping
@@ -69,7 +69,7 @@ Improvements
 * ✅ **Event-Driven Execution**: Implemented event-driven execution mechanism
 * ✅ **Parameter Mapping**: Improved Connection parameter mapping functionality
 * ✅ **Intelligent Parameter Matching**: Slot.receive can now intelligently match handler parameters
-* ✅ **Flow Context**: Routine2.emit can automatically get Flow context
+* ✅ **Flow Context**: Routine.emit can automatically get Flow context
 
 Testing
 ~~~~~~~

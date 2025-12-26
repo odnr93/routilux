@@ -4,7 +4,7 @@ ExecutionTracker 综合测试用例
 import time
 
 import pytest
-from flowforge import Flow, Routine2, ExecutionTracker
+from flowforge import Flow, Routine, ExecutionTracker
 class TestExecutionTrackerBasic:
     """ExecutionTracker 基本功能测试"""
     
@@ -80,14 +80,14 @@ class TestExecutionTrackerEventFlow:
         tracker = ExecutionTracker(flow_id="test_flow")
         
         data = {"key": "value"}
-        tracker.record_event("routine1", "output", "routine2", data)
+        tracker.record_event("routine1", "output", "routine", data)
         
         assert len(tracker.event_flow) == 1
         
         event = tracker.event_flow[0]
         assert event["source_routine_id"] == "routine1"
         assert event["event_name"] == "output"
-        assert event["target_routine_id"] == "routine2"
+        assert event["target_routine_id"] == "routine"
         assert event["data"] == data
         assert "timestamp" in event
     
@@ -143,11 +143,11 @@ class TestExecutionTrackerPerformance:
         tracker.record_routine_start("routine1")
         tracker.record_routine_end("routine1", status="completed")
         
-        tracker.record_routine_start("routine2")
-        tracker.record_routine_end("routine2", status="completed")
+        tracker.record_routine_start("routine")
+        tracker.record_routine_end("routine", status="completed")
         
         # 记录事件
-        tracker.record_event("routine1", "output", "routine2", {})
+        tracker.record_event("routine1", "output", "routine", {})
         
         flow_perf = tracker.get_flow_performance()
         
@@ -173,7 +173,7 @@ class TestExecutionTrackerIntegration:
         """测试 tracker 与 flow 执行的集成"""
         flow = Flow(flow_id="test_flow")
         
-        class RoutineA(Routine2):
+        class RoutineA(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -181,7 +181,7 @@ class TestExecutionTrackerIntegration:
             def __call__(self):
                 self.emit("output", data="A")
         
-        class RoutineB(Routine2):
+        class RoutineB(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -214,7 +214,7 @@ class TestExecutionTrackerSerialization:
         
         tracker.record_routine_start("routine1")
         tracker.record_routine_end("routine1", status="completed")
-        tracker.record_event("routine1", "output", "routine2", {})
+        tracker.record_event("routine1", "output", "routine", {})
         
         data = tracker.serialize()
         
@@ -241,7 +241,7 @@ class TestExecutionTrackerSerialization:
                 "timestamp": "2024-01-01T00:00:00",
                 "source_routine_id": "routine1",
                 "event_name": "output",
-                "target_routine_id": "routine2",
+                "target_routine_id": "routine",
                 "data": {}
             }],
             "performance_metrics": {}

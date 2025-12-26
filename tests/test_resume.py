@@ -4,7 +4,7 @@
 import json
 
 import pytest
-from flowforge import Flow, Routine2, JobState
+from flowforge import Flow, Routine, JobState
 class TestBasicResume:
     """基本恢复测试"""
     
@@ -12,7 +12,7 @@ class TestBasicResume:
         """测试用例 1: 从中间状态恢复"""
         flow = Flow()
         
-        class RoutineA(Routine2):
+        class RoutineA(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -20,7 +20,7 @@ class TestBasicResume:
             def __call__(self):
                 self.emit("output", data="A")
         
-        class RoutineB(Routine2):
+        class RoutineB(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -30,7 +30,7 @@ class TestBasicResume:
                 self._stats["processed"] = True
                 self.emit("output", data="B")
         
-        class RoutineC(Routine2):
+        class RoutineC(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -71,7 +71,7 @@ class TestBasicResume:
         """测试用例 2: 从完成状态恢复"""
         flow = Flow()
         
-        class SimpleRoutine(Routine2):
+        class SimpleRoutine(Routine):
             def __call__(self):
                 pass
         
@@ -101,7 +101,7 @@ class TestBasicResume:
         """测试用例 3: 从错误状态恢复"""
         flow = Flow()
         
-        class FailingRoutine(Routine2):
+        class FailingRoutine(Routine):
             def __call__(self):
                 raise ValueError("Test error")
         
@@ -132,7 +132,7 @@ class TestResumeConsistency:
         """测试用例 4: 恢复后状态一致性"""
         flow = Flow()
         
-        class SimpleRoutine(Routine2):
+        class SimpleRoutine(Routine):
             def __call__(self):
                 pass
         
@@ -164,7 +164,7 @@ class TestResumeConsistency:
         """测试用例 5: 部分执行恢复"""
         flow = Flow()
         
-        class RoutineA(Routine2):
+        class RoutineA(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -172,7 +172,7 @@ class TestResumeConsistency:
             def __call__(self):
                 self.emit("output", data="A")
         
-        class RoutineB(Routine2):
+        class RoutineB(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -181,7 +181,7 @@ class TestResumeConsistency:
             def process(self, data):
                 self.emit("output", data="B")
         
-        class RoutineC(Routine2):
+        class RoutineC(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)

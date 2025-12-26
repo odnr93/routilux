@@ -6,13 +6,13 @@ Routines are the core building blocks of flowforge. This guide explains how to c
 Creating a Routine
 ------------------
 
-To create a routine, inherit from ``Routine2``:
+To create a routine, inherit from ``Routine``:
 
 .. code-block:: python
 
-   from flowforge import Routine2
+   from flowforge import Routine
 
-   class MyRoutine(Routine2):
+   class MyRoutine(Routine):
        def __init__(self):
            super().__init__()
            # Define slots and events here

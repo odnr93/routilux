@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional, Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from flowforge.routine import Routine2
+    from flowforge.routine import Routine
     from flowforge.slot import Slot
     from flowforge.flow import Flow
 
@@ -25,7 +25,7 @@ class Event(Serializable):
     def __init__(
         self,
         name: str = "",
-        routine: Optional['Routine2'] = None,
+        routine: Optional['Routine'] = None,
         output_params: Optional[List[str]] = None
     ):
         """
@@ -33,12 +33,12 @@ class Event(Serializable):
         
         Args:
             name: 事件名称
-            routine: 所属的 Routine2 对象
+            routine: 所属的 Routine 对象
             output_params: 输出参数列表（用于文档化）
         """
         super().__init__()
         self.name: str = name
-        self.routine: 'Routine2' = routine
+        self.routine: 'Routine' = routine
         self.output_params: List[str] = output_params or []  # 输出参数列表
         self.connected_slots: List['Slot'] = []  # 连接的 slots
         

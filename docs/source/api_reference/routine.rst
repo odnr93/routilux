@@ -1,4 +1,4 @@
-Routine2 API
+Routine API
 ============
 
 .. automodule:: flowforge.routine

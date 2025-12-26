@@ -18,6 +18,9 @@ All core classes support serialization:
    
    # Serialize a job state
    data = job_state.serialize()
+   
+   # Serialize an error handler
+   data = error_handler.serialize()
 
 Deserializing Objects
 ---------------------
@@ -31,12 +34,16 @@ Deserialize objects:
    flow.deserialize(data)
    
    # Deserialize a routine
-   routine = Routine2()
+   routine = Routine()
    routine.deserialize(data)
    
    # Deserialize a job state
    job_state = JobState()
    job_state.deserialize(data)
+   
+   # Deserialize an error handler
+   error_handler = ErrorHandler()
+   error_handler.deserialize(data)
 
 Saving to JSON
 --------------
@@ -76,4 +83,11 @@ Classes register fields for serialization:
    self.add_serializable_fields(["field1", "field2", "field3"])
 
 Only registered fields are serialized. Complex objects (lists, dicts, other Serializable objects) are automatically handled.
+
+Special Handling
+----------------
+
+Some classes have special serialization behavior:
+
+* **ErrorHandler**: The ``ErrorStrategy`` enum is automatically converted to/from strings during serialization/deserialization.
 

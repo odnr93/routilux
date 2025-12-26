@@ -3,17 +3,17 @@ Event 测试用例
 """
 import pytest
 
-from flowforge import Routine2
+from flowforge import Routine
 class TestEventConnection:
     """Event 连接管理测试"""
     
     def test_connect_to_slot(self):
         """测试用例 1: 连接到 Slot"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["data"])
-        slot = routine2.define_slot("input")
+        slot = routine.define_slot("input")
         
         # 连接
         event.connect(slot)
@@ -24,11 +24,11 @@ class TestEventConnection:
     
     def test_disconnect_from_slot(self):
         """测试用例 2: 断开连接"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output")
-        slot = routine2.define_slot("input")
+        slot = routine.define_slot("input")
         
         # 连接
         event.connect(slot)
@@ -41,12 +41,12 @@ class TestEventConnection:
     
     def test_one_to_many_connection(self):
         """测试用例 3: 一对多连接 - 一个 event 连接多个 slots"""
-        routine1 = Routine2()
-        routine2 = Routine2()
-        routine3 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
+        routine3 = Routine()
         
         event = routine1.define_event("output")
-        slot1 = routine2.define_slot("input1")
+        slot1 = routine.define_slot("input1")
         slot2 = routine3.define_slot("input2")
         
         # 连接多个 slots
@@ -76,7 +76,7 @@ class TestEventEmission:
             elif kwargs:
                 received_data.append(("handler2", kwargs))
         
-        class Routine1(Routine2):
+        class Routine1(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["data"])
@@ -85,10 +85,10 @@ class TestEventEmission:
                 self.emit("output", data="test")
         
         routine1 = Routine1()
-        routine2 = Routine2()
-        routine3 = Routine2()
+        routine = Routine()
+        routine3 = Routine()
         
-        slot1 = routine2.define_slot("input1", handler=handler1)
+        slot1 = routine.define_slot("input1", handler=handler1)
         slot2 = routine3.define_slot("input2", handler=handler2)
         
         # 连接
@@ -99,7 +99,7 @@ class TestEventEmission:
         from flowforge import Flow
         flow = Flow()
         flow.add_routine(routine1, "r1")
-        flow.add_routine(routine2, "r2")
+        flow.add_routine(routine, "r2")
         flow.add_routine(routine3, "r3")
         flow.connect("r1", "output", "r2", "input1")
         flow.connect("r1", "output", "r3", "input2")
@@ -112,7 +112,7 @@ class TestEventEmission:
     
     def test_emit_without_connections(self):
         """测试用例 5: 无连接事件"""
-        routine = Routine2()
+        routine = Routine()
         
         event = routine.define_event("output", ["data"])
         
@@ -124,7 +124,7 @@ class TestEventEmission:
     
     def test_output_params(self):
         """测试用例 6: 输出参数验证"""
-        routine = Routine2()
+        routine = Routine()
         
         # 定义带输出参数的事件
         event = routine.define_event("output", ["result", "status"])
@@ -148,7 +148,7 @@ class TestEventDataFlow:
             elif kwargs:
                 results.append(kwargs)
         
-        class Routine1(Routine2):
+        class Routine1(Routine):
             def __init__(self):
                 super().__init__()
                 self.output_event = self.define_event("output", ["value1", "value2"])
@@ -157,9 +157,9 @@ class TestEventDataFlow:
                 self.emit("output", value1="a", value2="b")
         
         routine1 = Routine1()
-        routine2 = Routine2()
+        routine = Routine()
         
-        slot = routine2.define_slot("input", handler=handler)
+        slot = routine.define_slot("input", handler=handler)
         
         # 连接
         routine1.get_event("output").connect(slot)
@@ -168,7 +168,7 @@ class TestEventDataFlow:
         from flowforge import Flow
         flow = Flow()
         flow.add_routine(routine1, "r1")
-        flow.add_routine(routine2, "r2")
+        flow.add_routine(routine, "r2")
         flow.connect("r1", "output", "r2", "input")
         
         # 执行 flow

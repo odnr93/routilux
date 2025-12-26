@@ -3,17 +3,17 @@ Connection 综合测试用例 - 补充缺失的功能测试
 """
 
 import pytest
-from flowforge import Routine2, Connection
+from flowforge import Routine, Connection
 class TestConnectionDisconnect:
     """Connection 断开连接测试"""
     
     def test_disconnect(self):
         """测试断开连接"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["data"])
-        slot = routine2.define_slot("input")
+        slot = routine.define_slot("input")
         
         # 创建连接
         connection = Connection(event, slot)
@@ -31,11 +31,11 @@ class TestConnectionDisconnect:
     
     def test_disconnect_multiple_times(self):
         """测试多次断开连接（应该是安全的）"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["data"])
-        slot = routine2.define_slot("input")
+        slot = routine.define_slot("input")
         
         connection = Connection(event, slot)
         
@@ -52,8 +52,8 @@ class TestConnectionActivation:
     
     def test_activate_with_mapping(self):
         """测试带参数映射的激活"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         received_data = {}
         
@@ -61,7 +61,7 @@ class TestConnectionActivation:
             received_data["mapped_param"] = mapped_param
         
         event = routine1.define_event("output", ["source_param"])
-        slot = routine2.define_slot("input", handler=handler)
+        slot = routine.define_slot("input", handler=handler)
         
         param_mapping = {"source_param": "mapped_param"}
         connection = Connection(event, slot, param_mapping=param_mapping)
@@ -74,16 +74,18 @@ class TestConnectionActivation:
     
     def test_activate_without_mapping(self):
         """测试不带参数映射的激活"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         received_data = {}
         
-        def handler(data):
-            received_data["data"] = data
+        # 根据 slot 的逻辑，如果 handler 参数名不匹配字典中的键，会传递整个字典
+        # 所以我们需要使用 **kwargs 或者匹配的参数名
+        def handler(**kwargs):
+            received_data["data"] = kwargs.get("data")
         
         event = routine1.define_event("output", ["data"])
-        slot = routine2.define_slot("input", handler=handler)
+        slot = routine.define_slot("input", handler=handler)
         
         connection = Connection(event, slot)
         
@@ -95,8 +97,8 @@ class TestConnectionActivation:
     
     def test_activate_with_partial_mapping(self):
         """测试部分参数映射"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         received_data = {}
         
@@ -105,7 +107,7 @@ class TestConnectionActivation:
             received_data["other_param"] = other_param
         
         event = routine1.define_event("output", ["source_param", "other_param"])
-        slot = routine2.define_slot("input", handler=handler)
+        slot = routine.define_slot("input", handler=handler)
         
         # 只映射一个参数
         param_mapping = {"source_param": "mapped_param"}
@@ -122,11 +124,11 @@ class TestConnectionSerialization:
     
     def test_connection_serialize(self):
         """测试连接序列化"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["data"])
-        slot = routine2.define_slot("input")
+        slot = routine.define_slot("input")
         
         param_mapping = {"data": "input_data"}
         connection = Connection(event, slot, param_mapping=param_mapping)
@@ -140,11 +142,11 @@ class TestConnectionSerialization:
     
     def test_connection_deserialize(self):
         """测试连接反序列化"""
-        routine1 = Routine2()
-        routine2 = Routine2()
+        routine1 = Routine()
+        routine = Routine()
         
         event = routine1.define_event("output", ["data"])
-        slot = routine2.define_slot("input")
+        slot = routine.define_slot("input")
         
         data = {
             "_type": "Connection",

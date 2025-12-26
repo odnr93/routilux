@@ -38,7 +38,7 @@ Connect routines by linking events to slots:
    flow.connect(
        source_routine_id="routine1",
        source_event="output",
-       target_routine_id="routine2",
+       target_routine_id="routine",
        target_slot="input"
    )
 
@@ -49,7 +49,7 @@ You can also specify parameter mapping:
    flow.connect(
        source_routine_id="routine1",
        source_event="output",
-       target_routine_id="routine2",
+       target_routine_id="routine",
        target_slot="input",
        param_mapping={"source_param": "target_param"}
    )

@@ -13,10 +13,10 @@ import os
 
 
 
-from flowforge import Flow, Routine2
+from flowforge import Flow, Routine
 
 
-class DataSource(Routine2):
+class DataSource(Routine):
     """A routine that generates data"""
     
     def __init__(self):
@@ -30,7 +30,7 @@ class DataSource(Routine2):
         self.emit("output", data=output_data)
 
 
-class DataProcessor(Routine2):
+class DataProcessor(Routine):
     """A routine that processes data"""
     
     def __init__(self):
@@ -55,7 +55,7 @@ class DataProcessor(Routine2):
         self.emit("output", result=self.processed_data)
 
 
-class DataSink(Routine2):
+class DataSink(Routine):
     """A routine that receives final data"""
     
     def __init__(self):

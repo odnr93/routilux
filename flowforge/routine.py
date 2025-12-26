@@ -1,5 +1,5 @@
 """
-Routine2 基类
+Routine 基类
 
 改进的 Routine 机制，支持 slots（输入插槽）和 events（输出事件）。
 """
@@ -17,7 +17,7 @@ from flowforge.serialization_utils import get_routine_class_info
 
 
 @register_serializable
-class Routine2(Serializable):
+class Routine(Serializable):
     """
     改进的 Routine 基类
     
@@ -28,7 +28,7 @@ class Routine2(Serializable):
     """
     
     def __init__(self):
-        """初始化 Routine2 对象"""
+        """初始化 Routine 对象"""
         super().__init__()
         self._id: str = hex(id(self))
         self._slots: Dict[str, 'Slot'] = {}  # 插槽字典
@@ -198,7 +198,7 @@ class Routine2(Serializable):
     
     def serialize(self) -> Dict[str, Any]:
         """
-        序列化 Routine2，包括类信息和状态
+        序列化 Routine，包括类信息和状态
         
         Returns:
             序列化后的字典
@@ -231,7 +231,7 @@ class Routine2(Serializable):
     
     def deserialize(self, data: Dict[str, Any]) -> None:
         """
-        反序列化 Routine2
+        反序列化 Routine
         
         Args:
             data: 序列化数据

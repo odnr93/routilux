@@ -4,7 +4,7 @@ FlowForge - Event-driven workflow orchestration framework
 Provides flexible connection, state management, and workflow orchestration capabilities.
 """
 
-from flowforge.routine import Routine2
+from flowforge.routine import Routine
 from flowforge.slot import Slot
 from flowforge.event import Event
 from flowforge.connection import Connection
@@ -14,7 +14,7 @@ from flowforge.execution_tracker import ExecutionTracker
 from flowforge.error_handler import ErrorHandler, ErrorStrategy
 
 __all__ = [
-    "Routine2",
+    "Routine",
     "Slot",
     "Event",
     "Connection",

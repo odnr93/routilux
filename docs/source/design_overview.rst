@@ -74,7 +74,7 @@ Module Structure
 Class Design
 ~~~~~~~~~~~~
 
-Routine2 Class
+Routine Class
 ^^^^^^^^^^^^^^
 
 The improved Routine base class with:
