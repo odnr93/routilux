@@ -18,7 +18,7 @@ All core classes support serialization:
    
    # Serialize a job state
    data = job_state.serialize()
-   
+
    # Serialize an error handler
    data = error_handler.serialize()
 

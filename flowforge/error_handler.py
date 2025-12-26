@@ -137,7 +137,7 @@ class ErrorHandler(Serializable):
     def reset(self) -> None:
         """重置重试计数"""
         self.retry_count = 0
-    
+
     def serialize(self) -> Dict[str, Any]:
         """
         序列化 ErrorHandler
