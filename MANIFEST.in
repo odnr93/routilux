@@ -1,0 +1,15 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+include pyproject.toml
+include requirements.txt
+include requirements-dev.txt
+include requirements-docs.txt
+include .readthedocs.yml
+recursive-include docs *.rst *.md *.py *.conf *.bat Makefile
+recursive-include examples *.py
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * .pytest_cache
+recursive-exclude * .mypy_cache
+
