@@ -30,6 +30,132 @@ class SerializableRegistry:
         return cls.registry.get(class_name)
 
 
+def check_serializable_constructability(obj: 'Serializable') -> None:
+    """Check if a Serializable object can be constructed without arguments.
+    
+    This function validates that the object's class can be instantiated
+    without arguments, which is required for proper deserialization.
+    
+    Args:
+        obj: Serializable object to check.
+        
+    Raises:
+        TypeError: If the object's class cannot be initialized without arguments.
+            This includes detailed information about which class failed and
+            what parameters are required.
+    """
+    obj_class = type(obj)
+    init_signature = inspect.signature(obj_class.__init__)
+    parameters = init_signature.parameters.values()
+    
+    required_params = []
+    for param in parameters:
+        if (
+            param.name != "self"
+            and param.default == inspect.Parameter.empty
+            and param.kind != inspect.Parameter.VAR_KEYWORD
+            and param.kind != inspect.Parameter.VAR_POSITIONAL
+        ):
+            required_params.append(param.name)
+    
+    if required_params:
+        error_message = (
+            f"Serialization Error: {obj_class.__name__} cannot be deserialized because "
+            f"its __init__ method requires parameters: {', '.join(required_params)}\n"
+            f"Serializable classes must support initialization with no arguments.\n"
+            f"For Routine subclasses, use _config dictionary instead of constructor parameters.\n"
+            f"Example:\n"
+            f"  # ❌ Wrong:\n"
+            f"  class MyRoutine(Routine):\n"
+            f"      def __init__(self, param1, param2):\n"
+            f"          super().__init__()\n"
+            f"          self.param1 = param1\n"
+            f"\n"
+            f"  # ✅ Correct:\n"
+            f"  class MyRoutine(Routine):\n"
+            f"      def __init__(self):\n"
+            f"          super().__init__()\n"
+            f"          # Set config after creation:\n"
+            f"          # routine.set_config(param1=value1, param2=value2)"
+        )
+        raise TypeError(error_message)
+
+
+def validate_serializable_tree(obj: 'Serializable', visited: Optional[set] = None) -> None:
+    """Recursively validate that all Serializable objects in a tree can be constructed.
+    
+    This function traverses all Serializable objects referenced by the given object
+    and checks that each one can be instantiated without arguments. This is useful
+    for validating a Flow before serialization to catch issues early.
+    
+    Args:
+        obj: Root Serializable object to validate.
+        visited: Set of object IDs already visited (to avoid infinite loops).
+        
+    Raises:
+        TypeError: If any Serializable object in the tree cannot be constructed
+            without arguments. The error message includes the path to the problematic
+            object.
+    """
+    if visited is None:
+        visited = set()
+    
+    # Use object ID to track visited objects (avoid infinite loops)
+    obj_id = id(obj)
+    if obj_id in visited:
+        return
+    visited.add(obj_id)
+    
+    # Check the object itself
+    try:
+        check_serializable_constructability(obj)
+    except TypeError as e:
+        # Enhance error message with object information
+        obj_class = type(obj).__name__
+        obj_repr = repr(obj) if hasattr(obj, '__repr__') else f"{obj_class} instance"
+        raise TypeError(
+            f"Found non-constructable Serializable object: {obj_repr}\n"
+            f"{str(e)}"
+        ) from e
+    
+    # Recursively check all Serializable fields
+    if hasattr(obj, 'fields_to_serialize'):
+        for field_name in obj.fields_to_serialize:
+            try:
+                field_value = getattr(obj, field_name, None)
+            except AttributeError:
+                continue
+            
+            # Import Serializable here to avoid circular import
+            from flowforge.utils.serializable import Serializable as SerializableClass
+            
+            if isinstance(field_value, SerializableClass):
+                try:
+                    validate_serializable_tree(field_value, visited)
+                except TypeError as e:
+                    raise TypeError(
+                        f"In field '{field_name}' of {type(obj).__name__}: {str(e)}"
+                    ) from e
+            elif isinstance(field_value, list):
+                for i, item in enumerate(field_value):
+                    if isinstance(item, SerializableClass):
+                        try:
+                            validate_serializable_tree(item, visited)
+                        except TypeError as e:
+                            raise TypeError(
+                                f"In field '{field_name}[{i}]' of {type(obj).__name__}: {str(e)}"
+                            ) from e
+            elif isinstance(field_value, dict):
+                for key, value in field_value.items():
+                    if isinstance(value, SerializableClass):
+                        try:
+                            validate_serializable_tree(value, visited)
+                        except TypeError as e:
+                            raise TypeError(
+                                f"In field '{field_name}[\"{key}\"]' of {type(obj).__name__}: {str(e)}"
+                            ) from e
+
+
 def register_serializable(cls):
     """Decorator to register a class as serializable in the registry.
 

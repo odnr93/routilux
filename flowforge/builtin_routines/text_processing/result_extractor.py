@@ -33,30 +33,29 @@ class ExtractorProtocol(Protocol):
 
 class ResultExtractor(Routine):
     """Routine for extracting results from structured output.
-    
+
     This routine provides a flexible, extensible system for extracting structured
     data from various formats. It supports multiple extraction strategies and
     allows custom extractors to be registered.
-    
+
     Features:
-    - Multiple built-in extractors (JSON, YAML, XML, CSV, code blocks)
-    - Extensible architecture with custom extractor support
-    - Chain-based extraction with fallback mechanisms
-    - Intelligent type detection and conversion
-    - Comprehensive error handling and reporting
-    - Rich metadata about extraction process
-    
+        - Multiple built-in extractors (JSON, YAML, XML, CSV, code blocks)
+        - Extensible architecture with custom extractor support
+        - Chain-based extraction with fallback mechanisms
+        - Intelligent type detection and conversion
+        - Comprehensive error handling and reporting
+        - Rich metadata about extraction process
+
     Extraction Strategies:
-    - "auto": Try all extractors in order until one succeeds
-    - "priority": Try extractors in priority order
-    - "all": Extract using all applicable extractors
-    - "first_match": Return first successful extraction
-    
+        - "auto": Try all extractors in order until one succeeds
+        - "priority": Try extractors in priority order
+        - "all": Extract using all applicable extractors
+        - "first_match": Return first successful extraction
+
     Examples:
         >>> extractor = ResultExtractor()
         >>> extractor.set_config(strategy="auto")
-        >>> extractor.input_slot.receive({"data": '```json\n{"key": "value"}\n```'})
-        
+        >>> extractor.input_slot.receive({"data": '```json\\n{"key": "value"}\\n```'})
         >>> # Register custom extractor
         >>> def my_extractor(data, config):
         ...     if isinstance(data, str) and data.startswith("CUSTOM:"):

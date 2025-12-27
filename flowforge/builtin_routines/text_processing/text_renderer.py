@@ -10,24 +10,23 @@ from flowforge.routine import Routine
 
 class TextRenderer(Routine):
     """Routine for rendering objects into formatted text.
-    
+
     This routine converts dictionaries and lists into formatted text
     with XML-like tags, making structured data more readable.
-    
+
     Features:
-    - Recursively renders nested dictionaries and lists
-    - Adds XML-like tags for structure
-    - Handles primitive types (str, int, float, bool)
-    - Configurable tag formatting
-    
+        - Recursively renders nested dictionaries and lists
+        - Adds XML-like tags for structure
+        - Handles primitive types (str, int, float, bool)
+        - Configurable tag formatting
+
     Examples:
         >>> renderer = TextRenderer()
         >>> renderer.define_slot("input", handler=renderer.render)
         >>> renderer.define_event("output", ["rendered_text"])
-        
         >>> # Render a dictionary
         >>> data = {"name": "test", "value": 42}
-        >>> # Output: "<name>test</name>\n<value>42</value>"
+        >>> # Output: "<name>test</name>\\n<value>42</value>"
     """
     
     def __init__(self):

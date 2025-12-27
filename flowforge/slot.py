@@ -61,7 +61,7 @@ class Slot(Serializable):
         
         Custom merge function:
             >>> def custom_merge(old, new):
-            ...     return {**old, **new, "merged": True}
+            ...     return dict(old, **new, merged=True)
             >>> slot = routine.define_slot("input", merge_strategy=custom_merge)
             >>> slot.receive({"a": 1})  # handler receives {"a": 1, "merged": True}
     """
@@ -80,13 +80,17 @@ class Slot(Serializable):
             routine: Parent Routine object that owns this slot.
             handler: Handler function called when data is received. The function
                 signature can be flexible:
-                - If it accepts **kwargs, all merged data is passed as keyword arguments
+
+                - If it accepts ``**kwargs``, all merged data is passed as keyword arguments
                 - If it accepts a single 'data' parameter, the entire merged dict is passed
                 - If it accepts a single parameter with a different name, the matching
                   value from merged data is passed, or the entire dict if no match
                 - If it accepts multiple parameters, matching values are passed as kwargs
+
                 If None, no handler is called when data is received.
             merge_strategy: Strategy for merging new data with existing data.
+                Possible values:
+
                 - "override" (default): New data completely replaces old data.
                   Each receive() call passes only the new data to the handler.
                   Use this when you only need the latest data.
@@ -97,7 +101,7 @@ class Slot(Serializable):
                   that implements custom merge logic. The function should return
                   the merged result. Use this for complex merge requirements like
                   deep merging, averaging, or domain-specific operations.
-        
+
         Note:
             The merge_strategy determines how data accumulates in self._data and
             what data is passed to the handler. See the class docstring for

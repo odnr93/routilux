@@ -136,6 +136,8 @@ class Routine(Serializable):
                 details on how data is passed to the handler. If None, no handler
                 is called when data is received.
             merge_strategy: Strategy for merging new data with existing data.
+                Possible values:
+
                 - "override" (default): New data completely replaces old data.
                   Each receive() passes only the new data to the handler.
                   Use this when you only need the latest data.
@@ -145,6 +147,7 @@ class Routine(Serializable):
                 - Callable: A function(old_data: Dict, new_data: Dict) -> Dict
                   that implements custom merge logic. Use this for complex
                   requirements like deep merging or domain-specific operations.
+
                 See Slot class documentation for detailed examples and behavior.
 
         Returns:
@@ -155,28 +158,31 @@ class Routine(Serializable):
 
         Examples:
             Simple slot with override strategy (default):
-                >>> routine = MyRoutine()
-                >>> slot = routine.define_slot("input", handler=process_data)
-                >>> # slot uses "override" strategy by default
-            
+
+            >>> routine = MyRoutine()
+            >>> slot = routine.define_slot("input", handler=process_data)
+            >>> # slot uses "override" strategy by default
+
             Aggregation slot with append strategy:
-                >>> slot = routine.define_slot(
-                ...     "input",
-                ...     handler=aggregate_data,
-                ...     merge_strategy="append"
-                ... )
-                >>> # Values will be accumulated in lists
-            
+
+            >>> slot = routine.define_slot(
+            ...     "input",
+            ...     handler=aggregate_data,
+            ...     merge_strategy="append"
+            ... )
+            >>> # Values will be accumulated in lists
+
             Custom merge strategy:
-                >>> def deep_merge(old, new):
-                ...     result = old.copy()
-                ...     for k, v in new.items():
-                ...         if k in result and isinstance(result[k], dict):
-                ...             result[k] = deep_merge(result[k], v)
-                ...         else:
-                ...             result[k] = v
-                ...     return result
-                >>> slot = routine.define_slot("input", merge_strategy=deep_merge)
+
+            >>> def deep_merge(old, new):
+            ...     result = old.copy()
+            ...     for k, v in new.items():
+            ...         if k in result and isinstance(result[k], dict):
+            ...             result[k] = deep_merge(result[k], v)
+            ...         else:
+            ...             result[k] = v
+            ...     return result
+            >>> slot = routine.define_slot("input", merge_strategy=deep_merge)
         """
         if name in self._slots:
             raise ValueError(f"Slot '{name}' already exists in {self}")

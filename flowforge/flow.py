@@ -731,9 +731,62 @@ class Flow(Serializable):
     def serialize(self) -> Dict[str, Any]:
         """Serialize Flow, including all routines and connections.
 
+        Before serialization, this method validates that all Serializable objects
+        in the Flow (routines, connections, slots, events, etc.) can be constructed
+        without arguments. This ensures that deserialization will succeed.
+
         Returns:
             Serialized dictionary containing flow data.
+
+        Raises:
+            TypeError: If any Serializable object in the Flow cannot be constructed
+                without arguments. The error message includes details about which
+                object failed and how to fix it.
         """
+        # Validate all Serializable objects before serialization
+        # This catches issues early and provides clear error messages
+        from flowforge.utils.serializable import validate_serializable_tree
+        
+        try:
+            # Validate all routines
+            for routine_id, routine in self.routines.items():
+                try:
+                    validate_serializable_tree(routine)
+                except TypeError as e:
+                    raise TypeError(
+                        f"Routine '{routine_id}' ({type(routine).__name__}) cannot be serialized: {str(e)}"
+                    ) from e
+            
+            # Validate all connections
+            for i, connection in enumerate(self.connections):
+                try:
+                    validate_serializable_tree(connection)
+                except TypeError as e:
+                    raise TypeError(
+                        f"Connection #{i} cannot be serialized: {str(e)}"
+                    ) from e
+            
+            # Validate other Serializable fields (job_state, error_handler, etc.)
+            for field in self.fields_to_serialize:
+                if field in ["routines", "connections"]:
+                    continue  # Already validated above
+                value = getattr(self, field, None)
+                if isinstance(value, Serializable):
+                    try:
+                        validate_serializable_tree(value)
+                    except TypeError as e:
+                        raise TypeError(
+                            f"Field '{field}' cannot be serialized: {str(e)}"
+                        ) from e
+        except TypeError:
+            # Re-raise as-is (already has good error message)
+            raise
+        except Exception as e:
+            # Wrap unexpected errors
+            raise TypeError(
+                f"Error validating Flow for serialization: {str(e)}"
+            ) from e
+        
         # First call parent serialize, which handles registered fields
         # But we need special handling for routines and connections
         data = {}
