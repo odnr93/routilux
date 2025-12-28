@@ -1,9 +1,53 @@
-flowforge Documentation
-===========================
+.. FlowForge documentation master file
+
+FlowForge Documentation
+========================
+
+Welcome to FlowForge's documentation!
+
+FlowForge is an event-driven workflow orchestration framework with flexible connection, 
+state management, and workflow orchestration capabilities.
+
+.. grid:: 2
+   :gutter: 2
+   :margin: 2
+
+   .. grid-item-card::
+      :link: introduction
+      :link-type: doc
+      
+      **Getting Started**
+      
+      Learn the basics and key concepts of FlowForge.
+
+   .. grid-item-card::
+      :link: quickstart
+      :link-type: doc
+      
+      **Quick Start**
+      
+      Get up and running with FlowForge in minutes.
+
+   .. grid-item-card::
+      :link: user_guide/index
+      :link-type: doc
+      
+      **User Guide**
+      
+      Comprehensive guide to using FlowForge features.
+
+   .. grid-item-card::
+      :link: api_reference/index
+      :link-type: doc
+      
+      **API Reference**
+      
+      Complete API documentation for all classes and methods.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Documentation
+   :hidden:
 
    introduction
    installation
@@ -15,8 +59,6 @@ flowforge Documentation
    features
    testing
    changelog
-
-.. include:: introduction.rst
 
 Indices and tables
 ==================

@@ -4,7 +4,7 @@ Features
 This document provides a comprehensive overview of flowforge features.
 
 Core Features
-------------
+-------------
 
 Routine Base Class
 ~~~~~~~~~~~~~~~~~~~
@@ -115,7 +115,7 @@ STOP Strategy
 Stop execution immediately when an error occurs.
 
 CONTINUE Strategy
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 Continue execution despite errors, logging them for review.
 

@@ -9,7 +9,7 @@ Optimization Goals
 Optimize the design of pause/resume/cancel methods to clarify responsibility separation, avoid interface duplication, and reduce user confusion.
 
 Design Principles
-----------------
+-----------------
 
 Separation of Concerns
 ~~~~~~~~~~~~~~~~~~~~~~

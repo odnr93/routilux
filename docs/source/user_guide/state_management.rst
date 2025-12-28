@@ -75,7 +75,7 @@ Retrieve execution history:
    history = job_state.get_execution_history(routine_id="routine1")
 
 ExecutionTracker
----------------
+----------------
 
 ExecutionTracker provides performance monitoring:
 
@@ -90,7 +90,7 @@ ExecutionTracker provides performance monitoring:
    flow_perf = tracker.get_flow_performance()
 
 Performance Metrics
-------------------
+-------------------
 
 Performance metrics include:
 

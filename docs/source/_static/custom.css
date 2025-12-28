@@ -1,0 +1,207 @@
+/* Custom CSS for FlowForge Documentation */
+
+/* Improve code block styling */
+.highlight {
+    border-radius: 6px;
+    padding: 1em;
+    margin: 1em 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Better code block copy button */
+.copybutton {
+    opacity: 0.7;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.copybutton:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Improve table styling */
+table.docutils {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+}
+
+table.docutils th,
+table.docutils td {
+    border: 1px solid var(--color-background-border);
+    padding: 0.5em 1em;
+}
+
+table.docutils th {
+    background-color: var(--color-background-secondary);
+    font-weight: 600;
+}
+
+/* Better admonition boxes */
+.admonition {
+    border-radius: 6px;
+    padding: 1em;
+    margin: 1em 0;
+}
+
+.admonition-title {
+    font-weight: 600;
+    margin-bottom: 0.5em;
+}
+
+/* Improve API documentation */
+.py.class,
+.py.function,
+.py.method {
+    margin: 1em 0;
+    padding: 1em;
+    background-color: var(--color-background-secondary);
+    border-radius: 6px;
+}
+
+/* Better parameter lists */
+dl.field-list {
+    margin: 1em 0;
+}
+
+dl.field-list dt {
+    font-weight: 600;
+    color: var(--color-content-foreground);
+}
+
+dl.field-list dd {
+    margin-left: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+/* Improve signature styling */
+.sig {
+    font-family: var(--font-stack--monospace);
+    font-size: 0.9em;
+}
+
+.sig-name {
+    color: var(--color-brand-primary);
+    font-weight: 600;
+}
+
+/* Better link styling */
+a {
+    color: var(--color-brand-primary);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+a:hover {
+    color: var(--color-brand-content);
+    text-decoration: underline;
+}
+
+/* Improve heading styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+}
+
+h1 {
+    border-bottom: 2px solid var(--color-background-border);
+    padding-bottom: 0.3em;
+}
+
+/* Better list styling */
+ul, ol {
+    margin: 0.5em 0;
+    padding-left: 2em;
+}
+
+li {
+    margin: 0.3em 0;
+}
+
+/* Improve code inline styling */
+code {
+    background-color: var(--color-background-secondary);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+/* Better blockquote styling */
+blockquote {
+    border-left: 4px solid var(--color-brand-primary);
+    padding-left: 1em;
+    margin: 1em 0;
+    font-style: italic;
+    color: var(--color-content-foreground);
+}
+
+/* Improve search results */
+.search-results {
+    border-radius: 6px;
+}
+
+/* Better navigation */
+.sidebar-brand {
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+/* Improve mobile responsiveness */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+    }
+}
+
+/* Custom badge styling */
+.badge {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    border-radius: 3px;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin: 0 0.2em;
+}
+
+.badge-primary {
+    background-color: var(--color-brand-primary);
+    color: white;
+}
+
+.badge-secondary {
+    background-color: var(--color-background-secondary);
+    color: var(--color-content-foreground);
+}
+
+/* Improve example code blocks */
+.literal-block {
+    border-radius: 6px;
+    overflow-x: auto;
+}
+
+/* Better type hints display */
+.property {
+    font-family: var(--font-stack--monospace);
+    color: var(--color-brand-primary);
+}
+
+/* Improve API reference sections */
+.py.class > .descname,
+.py.function > .descname,
+.py.method > .descname {
+    color: var(--color-brand-primary);
+    font-weight: 600;
+}
+
+/* Better parameter documentation */
+.py.parameter {
+    font-family: var(--font-stack--monospace);
+}
+
+/* Improve return type display */
+.py.return {
+    font-style: italic;
+    color: var(--color-content-foreground);
+}
+

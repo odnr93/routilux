@@ -13,7 +13,7 @@ Core Improvements
 5. **JobState Management**: Support for execution state recording and recovery (resume) functionality
 
 Core Concepts
-------------
+-------------
 
 Routine Objects
 ~~~~~~~~~~~~~~~
@@ -25,7 +25,7 @@ Each Routine object is a node in the workflow with the following characteristics
 * **Stats (State)**: A dictionary for storing all state information during routine execution
 
 Connection Relationships
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: text
 
@@ -59,7 +59,7 @@ Architecture
 ------------
 
 Module Structure
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
 .. code-block:: text
 
