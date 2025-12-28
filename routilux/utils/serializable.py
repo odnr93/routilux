@@ -30,15 +30,15 @@ class SerializableRegistry:
         return cls.registry.get(class_name)
 
 
-def check_serializable_constructability(obj: 'Serializable') -> None:
+def check_serializable_constructability(obj: "Serializable") -> None:
     """Check if a Serializable object can be constructed without arguments.
-    
+
     This function validates that the object's class can be instantiated
     without arguments, which is required for proper deserialization.
-    
+
     Args:
         obj: Serializable object to check.
-        
+
     Raises:
         TypeError: If the object's class cannot be initialized without arguments.
             This includes detailed information about which class failed and
@@ -47,7 +47,7 @@ def check_serializable_constructability(obj: 'Serializable') -> None:
     obj_class = type(obj)
     init_signature = inspect.signature(obj_class.__init__)
     parameters = init_signature.parameters.values()
-    
+
     required_params = []
     for param in parameters:
         if (
@@ -57,7 +57,7 @@ def check_serializable_constructability(obj: 'Serializable') -> None:
             and param.kind != inspect.Parameter.VAR_POSITIONAL
         ):
             required_params.append(param.name)
-    
+
     if required_params:
         error_message = (
             f"Serialization Error: {obj_class.__name__} cannot be deserialized because "
@@ -81,17 +81,17 @@ def check_serializable_constructability(obj: 'Serializable') -> None:
         raise TypeError(error_message)
 
 
-def validate_serializable_tree(obj: 'Serializable', visited: Optional[set] = None) -> None:
+def validate_serializable_tree(obj: "Serializable", visited: Optional[set] = None) -> None:
     """Recursively validate that all Serializable objects in a tree can be constructed.
-    
+
     This function traverses all Serializable objects referenced by the given object
     and checks that each one can be instantiated without arguments. This is useful
     for validating a Flow before serialization to catch issues early.
-    
+
     Args:
         obj: Root Serializable object to validate.
         visited: Set of object IDs already visited (to avoid infinite loops).
-        
+
     Raises:
         TypeError: If any Serializable object in the tree cannot be constructed
             without arguments. The error message includes the path to the problematic
@@ -99,36 +99,35 @@ def validate_serializable_tree(obj: 'Serializable', visited: Optional[set] = Non
     """
     if visited is None:
         visited = set()
-    
+
     # Use object ID to track visited objects (avoid infinite loops)
     obj_id = id(obj)
     if obj_id in visited:
         return
     visited.add(obj_id)
-    
+
     # Check the object itself
     try:
         check_serializable_constructability(obj)
     except TypeError as e:
         # Enhance error message with object information
         obj_class = type(obj).__name__
-        obj_repr = repr(obj) if hasattr(obj, '__repr__') else f"{obj_class} instance"
+        obj_repr = repr(obj) if hasattr(obj, "__repr__") else f"{obj_class} instance"
         raise TypeError(
-            f"Found non-constructable Serializable object: {obj_repr}\n"
-            f"{str(e)}"
+            f"Found non-constructable Serializable object: {obj_repr}\n" f"{str(e)}"
         ) from e
-    
+
     # Recursively check all Serializable fields
-    if hasattr(obj, 'fields_to_serialize'):
+    if hasattr(obj, "fields_to_serialize"):
         for field_name in obj.fields_to_serialize:
             try:
                 field_value = getattr(obj, field_name, None)
             except AttributeError:
                 continue
-            
+
             # Import Serializable here to avoid circular import
             from routilux.utils.serializable import Serializable as SerializableClass
-            
+
             if isinstance(field_value, SerializableClass):
                 try:
                     validate_serializable_tree(field_value, visited)
@@ -229,9 +228,7 @@ class Serializable:
         Args:
             fields: List of field names to be removed.
         """
-        self.fields_to_serialize = [
-            x for x in self.fields_to_serialize if x not in fields
-        ]
+        self.fields_to_serialize = [x for x in self.fields_to_serialize if x not in fields]
 
     def serialize(self) -> Dict[str, Any]:
         """Serialize the object to a dictionary.
@@ -246,13 +243,11 @@ class Serializable:
                 data[field] = value.serialize()
             elif isinstance(value, list):
                 data[field] = [
-                    item.serialize() if isinstance(item, Serializable) else item
-                    for item in value
+                    item.serialize() if isinstance(item, Serializable) else item for item in value
                 ]
             elif isinstance(value, dict):
                 data[field] = {
-                    k: v.serialize() if isinstance(v, Serializable) else v
-                    for k, v in value.items()
+                    k: v.serialize() if isinstance(v, Serializable) else v for k, v in value.items()
                 }
             else:
                 data[field] = value
@@ -274,14 +269,9 @@ class Serializable:
                         attr: Serializable = attr_class()
                         attr.deserialize(value)
                     else:
-                        attr = {
-                            k: Serializable.deserialize_item(v)
-                            for k, v in value.items()
-                        }
+                        attr = {k: Serializable.deserialize_item(v) for k, v in value.items()}
                 else:
-                    attr = {
-                        k: Serializable.deserialize_item(v) for k, v in value.items()
-                    }
+                    attr = {k: Serializable.deserialize_item(v) for k, v in value.items()}
             elif isinstance(value, list):
                 attr = [Serializable.deserialize_item(item) for item in value]
             else:
@@ -302,9 +292,7 @@ class Serializable:
             if "_type" in item:
                 attr_class = SerializableRegistry.get_class(item["_type"])
                 if not attr_class:
-                    return {
-                        k: Serializable.deserialize_item(v) for k, v in item.items()
-                    }
+                    return {k: Serializable.deserialize_item(v) for k, v in item.items()}
                 else:
                     obj: Serializable = attr_class()
                     obj.deserialize(item)
@@ -315,4 +303,3 @@ class Serializable:
             return [Serializable.deserialize_item(item) for item in item]
         else:
             return item
-

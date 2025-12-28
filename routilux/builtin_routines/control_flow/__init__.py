@@ -9,4 +9,3 @@ from routilux.builtin_routines.control_flow.conditional_router import Conditiona
 __all__ = [
     "ConditionalRouter",
 ]
-

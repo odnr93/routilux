@@ -3,6 +3,7 @@ Data validator routine.
 
 Validates data against schemas or validation rules.
 """
+
 from __future__ import annotations
 from typing import Dict, Any, Callable, Optional, List, Union, Tuple
 from routilux.routine import Routine
@@ -10,16 +11,16 @@ from routilux.routine import Routine
 
 class DataValidator(Routine):
     """Routine for validating data against schemas or rules.
-    
+
     This routine validates input data against configurable validation
     rules, useful for data quality checks and schema validation.
-    
+
     Features:
     - Configurable validation rules
     - Support for custom validation functions
     - Detailed validation error messages
     - Optional strict mode (stop on first error)
-    
+
     Examples:
         >>> validator = DataValidator()
         >>> validator.set_config(
@@ -28,29 +29,29 @@ class DataValidator(Routine):
         >>> validator.define_slot("input", handler=validator.validate)
         >>> validator.define_event("output", ["is_valid", "errors", "validated_data"])
     """
-    
+
     def __init__(self):
         """Initialize DataValidator routine."""
         super().__init__()
-        
+
         # Set default configuration
         self.set_config(
             rules={},  # Dict of field_name -> validation function
             strict_mode=False,  # Stop on first validation error
             required_fields=[],  # List of required field names
-            allow_extra_fields=True  # Allow fields not in rules
+            allow_extra_fields=True,  # Allow fields not in rules
         )
-        
+
         # Register built-in validators
         self._register_builtin_validators()
-        
+
         # Define input slot
         self.input_slot = self.define_slot("input", handler=self._handle_input)
-        
+
         # Define output events
         self.valid_event = self.define_event("valid", ["validated_data"])
         self.invalid_event = self.define_event("invalid", ["errors", "data"])
-    
+
     def _register_builtin_validators(self):
         """Register built-in validation functions."""
         builtins = {
@@ -64,16 +65,16 @@ class DataValidator(Routine):
             "is_positive": lambda x: isinstance(x, (int, float)) and x > 0,
             "is_non_negative": lambda x: isinstance(x, (int, float)) and x >= 0,
         }
-        
+
         # Store builtins for reference (not in config)
         # Initialize as instance attribute
         if not hasattr(self, "_builtin_validators"):
             self._builtin_validators = {}
         self._builtin_validators.update(builtins)
-    
+
     def _handle_input(self, data: Any = None, rules: Optional[Dict] = None, **kwargs):
         """Handle input data and validate it.
-        
+
         Args:
             data: Data to validate.
             rules: Optional validation rules dict. If not provided,
@@ -83,18 +84,18 @@ class DataValidator(Routine):
         """
         # Extract data using Routine helper method
         data = self._extract_input_data(data, **kwargs)
-        
+
         # Track statistics
         self._track_operation("validations")
-        
+
         # Get rules from input or config
         rules = rules or self.get_config("rules", {})
         required_fields = self.get_config("required_fields", [])
         strict_mode = self.get_config("strict_mode", False)
         allow_extra_fields = self.get_config("allow_extra_fields", True)
-        
+
         errors = []
-        
+
         # Validate required fields
         if isinstance(data, dict):
             for field in required_fields:
@@ -102,7 +103,7 @@ class DataValidator(Routine):
                     errors.append(f"Required field '{field}' is missing")
                     if strict_mode:
                         break
-            
+
             # Validate fields against rules
             for field, value in data.items():
                 if field in rules:
@@ -116,7 +117,7 @@ class DataValidator(Routine):
                     errors.append(f"Unexpected field '{field}'")
                     if strict_mode:
                         break
-        
+
         elif isinstance(data, (list, tuple)):
             # Validate list items
             for i, item in enumerate(data):
@@ -127,7 +128,7 @@ class DataValidator(Routine):
                         errors.append(error_msg)
                         if strict_mode:
                             break
-        
+
         else:
             # Validate primitive value
             if "value" in rules:
@@ -135,28 +136,25 @@ class DataValidator(Routine):
                 is_valid, error_msg = self._validate_field("value", data, validator)
                 if not is_valid:
                     errors.append(error_msg)
-        
+
         # Emit result
         if errors:
             self._track_operation("validations", success=False, error_count=len(errors))
-            self.emit("invalid",
-                errors=errors,
-                data=data
-            )
+            self.emit("invalid", errors=errors, data=data)
         else:
             self._track_operation("validations", success=True)
-            self.emit("valid",
-                validated_data=data
-            )
-    
-    def _validate_field(self, field_name: str, value: Any, validator: Union[Callable, str]) -> Tuple[bool, Optional[str]]:
+            self.emit("valid", validated_data=data)
+
+    def _validate_field(
+        self, field_name: str, value: Any, validator: Union[Callable, str]
+    ) -> Tuple[bool, Optional[str]]:
         """Validate a single field.
-        
+
         Args:
             field_name: Name of the field being validated.
             value: Value to validate.
             validator: Validation function or builtin validator name.
-        
+
         Returns:
             Tuple of (is_valid, error_message).
         """
@@ -182,18 +180,18 @@ class DataValidator(Routine):
                     is_valid = bool(result)
             else:
                 return False, f"Invalid validator for field '{field_name}'"
-            
+
             if not is_valid:
                 return False, f"Field '{field_name}' failed validation"
-            
+
             return True, None
-        
+
         except Exception as e:
             return False, f"Validation error for field '{field_name}': {str(e)}"
-    
+
     def register_validator(self, name: str, func: Callable) -> None:
         """Register a custom validator function.
-        
+
         Args:
             name: Validator name.
             func: Validation function that takes value and returns bool or (bool, error_msg).
@@ -201,4 +199,3 @@ class DataValidator(Routine):
         if not hasattr(self, "_builtin_validators"):
             self._builtin_validators = {}
         self._builtin_validators[name] = func
-

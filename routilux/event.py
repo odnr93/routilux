@@ -3,6 +3,7 @@ Event class.
 
 Output events for sending data to other routines.
 """
+
 from __future__ import annotations
 from typing import List, Optional, Dict, Any, TYPE_CHECKING
 
@@ -17,48 +18,48 @@ from routilux.utils.serializable import register_serializable, Serializable
 @register_serializable
 class Event(Serializable):
     """Output event for transmitting data to other routines.
-    
+
     An Event represents an output point in a Routine that can transmit data
     to connected Slots in other routines. Events enable one-to-many data
     distribution: when an event is emitted, all connected slots receive
     the data simultaneously.
-    
+
     Key Concepts:
         - Events are defined in routines using define_event()
         - Events are emitted using emit() or Routine.emit()
         - Events can connect to multiple slots (broadcast pattern)
         - Slots can connect to multiple events (aggregation pattern)
         - Parameter mapping can transform data during transmission
-    
+
     Connection Model:
         Events support many-to-many connections:
         - One event can connect to many slots (broadcasting)
         - One slot can connect to many events (aggregation)
         - Connections are managed via Flow.connect()
         - Parameter mappings can rename parameters per connection
-    
+
     Examples:
         Basic usage:
             >>> class MyRoutine(Routine):
             ...     def __init__(self):
             ...         super().__init__()
             ...         self.output = self.define_event("output", ["result"])
-            ...     
+            ...
             ...     def __call__(self):
             ...         self.emit("output", result="success", status=200)
-        
+
         Multiple connections:
             >>> # One event, multiple receivers
             >>> flow.connect(source_id, "output", target1_id, "input1")
             >>> flow.connect(source_id, "output", target2_id, "input2")
             >>> # Both targets receive data when source emits "output"
     """
-    
+
     def __init__(
         self,
         name: str = "",
-        routine: Optional['Routine'] = None,
-        output_params: Optional[List[str]] = None
+        routine: Optional["Routine"] = None,
+        output_params: Optional[List[str]] = None,
     ):
         """Initialize an Event.
 
@@ -69,13 +70,13 @@ class Event(Serializable):
         """
         super().__init__()
         self.name: str = name
-        self.routine: 'Routine' = routine
+        self.routine: "Routine" = routine
         self.output_params: List[str] = output_params or []
-        self.connected_slots: List['Slot'] = []
-        
+        self.connected_slots: List["Slot"] = []
+
         # Register serializable fields
         self.add_serializable_fields(["name", "output_params"])
-    
+
     def serialize(self) -> Dict[str, Any]:
         """Serialize the Event.
 
@@ -83,13 +84,13 @@ class Event(Serializable):
             Serialized dictionary containing event data and references.
         """
         data = super().serialize()
-        
+
         # Save routine reference (via routine_id)
         if self.routine:
             data["_routine_id"] = self.routine._id
-        
+
         return data
-    
+
     def deserialize(self, data: Dict[str, Any]) -> None:
         """Deserialize the Event.
 
@@ -98,22 +99,22 @@ class Event(Serializable):
         """
         # Save routine_id for later reference restoration
         routine_id = data.pop("_routine_id", None)
-        
+
         # Deserialize basic fields
         super().deserialize(data)
-        
+
         # Routine reference needs to be restored when Flow is reconstructed
         if routine_id:
             self._routine_id = routine_id
-    
+
     def __repr__(self) -> str:
         """Return string representation of the Event."""
         if self.routine:
             return f"Event[{self.routine._id}.{self.name}]"
         else:
             return f"Event[{self.name}]"
-    
-    def connect(self, slot: 'Slot', param_mapping: Optional[Dict[str, str]] = None) -> None:
+
+    def connect(self, slot: "Slot", param_mapping: Optional[Dict[str, str]] = None) -> None:
         """Connect to a slot.
 
         Args:
@@ -126,8 +127,8 @@ class Event(Serializable):
             # Bidirectional connection
             if self not in slot.connected_events:
                 slot.connected_events.append(self)
-    
-    def disconnect(self, slot: 'Slot') -> None:
+
+    def disconnect(self, slot: "Slot") -> None:
         """Disconnect from a slot.
 
         Args:
@@ -138,27 +139,27 @@ class Event(Serializable):
             # Bidirectional disconnection
             if self in slot.connected_events:
                 slot.connected_events.remove(self)
-    
-    def emit(self, flow: Optional['Flow'] = None, **kwargs) -> None:
+
+    def emit(self, flow: Optional["Flow"] = None, **kwargs) -> None:
         """Emit the event and send data to all connected slots.
-        
+
         This method transmits data to all slots connected to this event.
         The data is sent according to the connection's parameter mapping,
         then merged with each slot's existing data according to the slot's
         merge_strategy, and finally passed to the slot's handler.
-        
+
         Execution Mode:
             - Sequential mode: Handlers are called synchronously, one after another.
               Execution order follows the order of connections.
             - Concurrent mode: Handlers may execute in parallel threads if the
               flow's execution_strategy is "concurrent". This allows independent
               routines to process data simultaneously.
-        
+
         Parameter Mapping:
             If a Connection has param_mapping defined (via Flow.connect()),
             parameter names are transformed before being sent to the slot.
             Unmapped parameters are passed with their original names.
-        
+
         Args:
             flow: Optional Flow object. Required for:
                 - Finding Connection objects to apply parameter mappings
@@ -171,13 +172,13 @@ class Event(Serializable):
                 data dictionary sent to connected slots. All values must be
                 serializable if the flow uses persistence.
                 Example: emit(flow=my_flow, result="success", count=42)
-        
+
         Examples:
             Basic emission:
                 >>> event = routine.define_event("output", ["result"])
                 >>> event.emit(flow=my_flow, result="data", status="ok")
                 >>> # Sends data to all connected slots
-            
+
             Without flow (limited functionality):
                 >>> event.emit(result="data")  # No parameter mapping, no history
                 >>> # Still works, but parameter mapping won't be applied
@@ -196,11 +197,12 @@ class Event(Serializable):
         else:
             # Concurrent execution mode
             from concurrent.futures import ThreadPoolExecutor, Future
-            
+
             executor = flow._get_executor()
-            
+
             # Submit task for each connected slot (asynchronous execution, non-blocking)
             for slot in self.connected_slots:
+
                 def activate_slot(s=slot, f=flow, k=kwargs.copy()):
                     """Thread-safe slot activation function."""
                     try:
@@ -214,33 +216,32 @@ class Event(Serializable):
                             s.receive(k)
                     except Exception as e:
                         import logging
+
                         logging.exception(f"Error in concurrent slot activation: {e}")
                         # Record error to routine stats
                         if s.routine:
-                            s.routine._stats.setdefault("errors", []).append({
-                                "slot": s.name,
-                                "error": str(e)
-                            })
-                
+                            s.routine._stats.setdefault("errors", []).append(
+                                {"slot": s.name, "error": str(e)}
+                            )
+
                 # Submit task to thread pool without waiting (avoid nested waits causing deadlock)
                 future = executor.submit(activate_slot)
-                
+
                 # Add future to Flow's tracking set (add immediately after submission to avoid race conditions)
-                if flow is not None and hasattr(flow, '_active_futures'):
+                if flow is not None and hasattr(flow, "_active_futures"):
                     with flow._execution_lock:
                         flow._active_futures.add(future)
-                    
+
                     # Add callback to automatically remove when task completes (add callback outside lock to avoid deadlock)
                     def remove_future(fut=future, f=flow):
                         """Remove from tracking set when task completes."""
-                        if f is not None and hasattr(f, '_active_futures'):
+                        if f is not None and hasattr(f, "_active_futures"):
                             with f._execution_lock:
                                 f._active_futures.discard(fut)
-                    
+
                     # Note: If future is already done, callback executes immediately
                     future.add_done_callback(remove_future)
-            
+
             # Note: Do not wait for futures to complete, let them execute asynchronously
             # This avoids deadlock issues with nested concurrent execution
             # If waiting is needed, call Flow.wait_for_completion() or Flow.shutdown()
-
