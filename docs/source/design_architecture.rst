@@ -1,7 +1,7 @@
 Architecture Details
 ====================
 
-This document provides detailed architecture information for flowforge.
+This document provides detailed architecture information for routilux.
 
 Class Hierarchy
 ---------------

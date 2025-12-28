@@ -1,4 +1,4 @@
-# FlowForge
+# Routilux
 
 Event-driven workflow orchestration framework with flexible connection, state management, and workflow orchestration capabilities.
 
@@ -39,13 +39,13 @@ pip install -e .
 Or install from PyPI (when published):
 
 ```bash
-pip install flowforge
+pip install routilux
 ```
 
 Or install from a built package:
 
 ```bash
-pip install dist/flowforge-*.whl
+pip install dist/routilux-*.whl
 ```
 
 ## Quick Start
@@ -53,7 +53,7 @@ pip install dist/flowforge-*.whl
 ### Creating a Routine
 
 ```python
-from flowforge import Routine
+from routilux import Routine
 
 class DataProcessor(Routine):
     def __init__(self):
@@ -70,7 +70,7 @@ class DataProcessor(Routine):
 ### Creating and Connecting a Flow
 
 ```python
-from flowforge import Flow
+from routilux import Flow
 
 flow = Flow(flow_id="my_flow")
 
@@ -95,7 +95,7 @@ print(processor1.stats())  # {"processed_count": 1}
 
 Full documentation is available at:
 
-* **Online**: [Read the Docs](https://flowforge.readthedocs.io) (when published)
+* **Online**: [Read the Docs](https://routilux.readthedocs.io) (when published)
 * **Local**: Build with `cd docs && make html`
 
 ### Documentation Structure
@@ -134,8 +134,8 @@ python examples/basic_example.py
 ## Project Structure
 
 ```
-flowforge/
-├── flowforge/          # Main package
+routilux/
+├── routilux/          # Main package
 │   ├── routine.py          # Routine base class
 │   ├── flow.py             # Flow manager
 │   ├── job_state.py        # JobState management
@@ -159,7 +159,7 @@ Run tests:
 pytest tests/
 
 # With coverage
-pytest --cov=flowforge --cov-report=html tests/
+pytest --cov=routilux --cov-report=html tests/
 ```
 
 ## Development
@@ -174,15 +174,15 @@ cd docs && make html
 ### Code Formatting
 
 ```bash
-black flowforge/
-flake8 flowforge/
+black routilux/
+flake8 routilux/
 ```
 
 ## License
 
-FlowForge is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details.
+Routilux is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details.
 
-Copyright (c) 2024 FlowForge Team
+Copyright (c) 2024 Routilux Team
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

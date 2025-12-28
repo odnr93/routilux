@@ -1,7 +1,7 @@
 Design Documentation
 =====================
 
-This section provides detailed design documentation for flowforge.
+This section provides detailed design documentation for routilux.
 
 .. toctree::
    :maxdepth: 2

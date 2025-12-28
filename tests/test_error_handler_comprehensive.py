@@ -4,7 +4,7 @@ ErrorHandler 综合测试用例
 import time
 
 import pytest
-from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 class TestErrorHandlerStrategies:
     """错误处理策略测试"""
     

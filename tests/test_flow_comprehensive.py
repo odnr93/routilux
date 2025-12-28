@@ -3,7 +3,7 @@ Flow 综合测试用例 - 补充缺失的功能测试
 """
 import json
 import pytest
-from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy, JobState
+from routilux import Flow, Routine, ErrorHandler, ErrorStrategy, JobState
 class TestFlowCancel:
     """Flow 取消功能测试"""
     

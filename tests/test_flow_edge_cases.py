@@ -4,7 +4,7 @@ Flow 边界情况和错误处理测试
 补充 Flow 类的测试覆盖，特别是边界情况和错误处理路径。
 """
 import pytest
-from flowforge import Flow, Routine, JobState, ErrorHandler, ErrorStrategy
+from routilux import Flow, Routine, JobState, ErrorHandler, ErrorStrategy
 from datetime import datetime
 
 

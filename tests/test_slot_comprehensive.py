@@ -4,7 +4,7 @@ Slot 综合测试用例
 补充 Slot 类的测试覆盖，特别是边界情况和错误处理。
 """
 import pytest
-from flowforge import Routine, Slot
+from routilux import Routine, Slot
 
 
 class TestSlotMergeStrategy:

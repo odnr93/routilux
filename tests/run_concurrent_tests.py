@@ -3,7 +3,7 @@
 
 在没有 pytest 的情况下，可以运行此脚本来验证并发执行功能。
 
-注意：此脚本需要 flowforge 包已安装。
+注意：此脚本需要 routilux 包已安装。
 安装方法：pip install -e .
 """
 import sys
@@ -11,11 +11,11 @@ import time
 import threading
 from pathlib import Path
 
-# Try to import flowforge - if it fails, provide helpful error message
+# Try to import routilux - if it fails, provide helpful error message
 try:
-    from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+    from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 except ImportError:
-    print("Error: flowforge package not found!")
+    print("Error: routilux package not found!")
     print("Please install the package first:")
     print("  pip install -e .")
     print("\nOr if you're in development mode:")

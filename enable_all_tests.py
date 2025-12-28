@@ -12,7 +12,7 @@ def enable_test_in_file(filepath):
         content = f.read()
     
     # 添加导入语句（如果还没有）
-    if 'sys.path.insert' not in content and 'flowforge' in content:
+    if 'sys.path.insert' not in content and 'routilux' in content:
         # 在文件开头添加导入
         import_pattern = r'(^"""[\s\S]*?"""\s*\n)'
         match = re.match(import_pattern, content)

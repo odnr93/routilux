@@ -15,13 +15,13 @@ Clone the repository and install:
 .. code-block:: bash
 
    git clone <repository-url>
-   cd flowforge
+   cd routilux
    pip install -e .
 
 Installing Dependencies
 -----------------------
 
-FlowForge is a standalone package with no external dependencies. All required functionality is included in the package.
+Routilux is a standalone package with no external dependencies. All required functionality is included in the package.
 
 Development Installation
 ------------------------
@@ -39,6 +39,6 @@ After installation, verify the installation:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine
+   from routilux import Flow, Routine
    print("Installation successful!")
 

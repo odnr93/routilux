@@ -2,7 +2,7 @@
 """
 Concurrent Flow Execution Demo
 
-This demo demonstrates FlowForge's concurrent execution capabilities.
+This demo demonstrates Routilux's concurrent execution capabilities.
 It shows how multiple routines can execute in parallel using thread pools,
 significantly improving performance for I/O-bound operations.
 
@@ -20,7 +20,7 @@ import time
 import threading
 import json
 from typing import Dict, Any, List
-from flowforge import (
+from routilux import (
     Flow, Routine, ErrorHandler, ErrorStrategy
 )
 
@@ -467,7 +467,7 @@ def test_dynamic_strategy_switch():
 def main():
     """Run all tests"""
     print("\n" + "=" * 70)
-    print("FlowForge Concurrent Execution Demo")
+    print("Routilux Concurrent Execution Demo")
     print("=" * 70)
     print()
     

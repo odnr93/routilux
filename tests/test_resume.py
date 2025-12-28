@@ -4,7 +4,7 @@
 import json
 
 import pytest
-from flowforge import Flow, Routine, JobState
+from routilux import Flow, Routine, JobState
 class TestBasicResume:
     """基本恢复测试"""
     

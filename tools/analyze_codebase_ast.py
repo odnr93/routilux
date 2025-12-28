@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AST Analyzer for FlowForge Codebase
+AST Analyzer for Routilux Codebase
 
 Analyzes core code files and generates a compact reference document for LLMs.
 """
@@ -195,7 +195,7 @@ def analyze_file(file_path: Path) -> Dict[str, Any]:
 def format_compact_doc(analysis_results: List[Dict[str, Any]]) -> str:
     """Format analysis results into a compact document."""
     lines = []
-    lines.append("# FlowForge Core API Reference (Compact)")
+    lines.append("# Routilux Core API Reference (Compact)")
     lines.append("=" * 60)
     lines.append("")
     lines.append("Compact reference for LLM code generation. Extracted from AST analysis.")
@@ -308,16 +308,16 @@ def main():
     """Main entry point."""
     # Core files to analyze
     core_files = [
-        'flowforge/routine.py',
-        'flowforge/flow.py',
-        'flowforge/slot.py',
-        'flowforge/event.py',
-        'flowforge/connection.py',
-        'flowforge/error_handler.py',
-        'flowforge/job_state.py',
-        'flowforge/execution_tracker.py',
-        'flowforge/utils/serializable.py',
-        'flowforge/serialization_utils.py',
+        'routilux/routine.py',
+        'routilux/flow.py',
+        'routilux/slot.py',
+        'routilux/event.py',
+        'routilux/connection.py',
+        'routilux/error_handler.py',
+        'routilux/job_state.py',
+        'routilux/execution_tracker.py',
+        'routilux/utils/serializable.py',
+        'routilux/serialization_utils.py',
     ]
     
     # Change to project root

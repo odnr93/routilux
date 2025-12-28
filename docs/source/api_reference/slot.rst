@@ -1,7 +1,7 @@
 Slot API
 ========
 
-.. automodule:: flowforge.slot
+.. automodule:: routilux.slot
    :members:
    :undoc-members:
    :show-inheritance:

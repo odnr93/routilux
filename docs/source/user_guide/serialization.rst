@@ -1,7 +1,7 @@
 Serialization
 =============
 
-flowforge provides full serialization support for persistence and state recovery.
+routilux provides full serialization support for persistence and state recovery.
 
 Serializing Objects
 -------------------

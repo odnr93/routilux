@@ -1,6 +1,6 @@
 # Examples
 
-This directory contains practical examples demonstrating flowforge usage.
+This directory contains practical examples demonstrating routilux usage.
 
 ## Examples
 
@@ -79,7 +79,7 @@ python examples/concurrent_flow_demo.py
 
 ## Running Examples
 
-All examples use FlowForge which is a standalone package. No additional dependencies are required.
+All examples use Routilux which is a standalone package. No additional dependencies are required.
 
 ```bash
 # From project root
@@ -89,5 +89,5 @@ python basic_example.py
 
 ## Requirements
 
-Examples use only the standard library and flowforge. No additional dependencies are required beyond the core package.
+Examples use only the standard library and routilux. No additional dependencies are required beyond the core package.
 

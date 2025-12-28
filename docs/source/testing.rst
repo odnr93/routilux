@@ -1,17 +1,17 @@
 Testing
 =======
 
-This document provides comprehensive testing information for flowforge.
+This document provides comprehensive testing information for routilux.
 
 Test Organization
 -----------------
 
-FlowForge tests are organized into two separate categories:
+Routilux tests are organized into two separate categories:
 
 1. **Core Tests**: Located in ``tests/`` directory, testing only the core
-   FlowForge framework functionality.
+   Routilux framework functionality.
 
-2. **Builtin Routines Tests**: Located in ``flowforge/builtin_routines/*/tests/``
+2. **Builtin Routines Tests**: Located in ``routilux/builtin_routines/*/tests/``
    directories, testing built-in routine implementations.
 
 This separation ensures that:
@@ -57,7 +57,7 @@ Built-in routines tests are located in their respective sub-packages:
 
 .. code-block:: text
 
-   flowforge/builtin_routines/
+   routilux/builtin_routines/
    ├── text_processing/
    │   └── tests/
    │       └── test_text_processing.py      # Text processing routines tests
@@ -109,22 +109,22 @@ Run all builtin_routines tests using pytest:
 
 .. code-block:: bash
 
-   pytest flowforge/builtin_routines/ -v
+   pytest routilux/builtin_routines/ -v
 
 Run tests for a specific builtin routine package:
 
 .. code-block:: bash
 
-   pytest flowforge/builtin_routines/text_processing/tests/ -v
-   pytest flowforge/builtin_routines/utils/tests/ -v
-   pytest flowforge/builtin_routines/data_processing/tests/ -v
-   pytest flowforge/builtin_routines/control_flow/tests/ -v
+   pytest routilux/builtin_routines/text_processing/tests/ -v
+   pytest routilux/builtin_routines/utils/tests/ -v
+   pytest routilux/builtin_routines/data_processing/tests/ -v
+   pytest routilux/builtin_routines/control_flow/tests/ -v
 
 Run a specific test file:
 
 .. code-block:: bash
 
-   pytest flowforge/builtin_routines/text_processing/tests/test_text_processing.py -v
+   pytest routilux/builtin_routines/text_processing/tests/test_text_processing.py -v
 
 Run All Tests
 ~~~~~~~~~~~~~
@@ -133,7 +133,7 @@ Run both core and builtin_routines tests:
 
 .. code-block:: bash
 
-   pytest tests/ flowforge/builtin_routines/ -v
+   pytest tests/ routilux/builtin_routines/ -v
 
 Generate Coverage Report
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -142,19 +142,19 @@ Core tests coverage:
 
 .. code-block:: bash
 
-   pytest --cov=flowforge --cov-report=html tests/
+   pytest --cov=routilux --cov-report=html tests/
 
 Builtin routines coverage:
 
 .. code-block:: bash
 
-   pytest flowforge/builtin_routines/ --cov=flowforge.builtin_routines --cov-report=html
+   pytest routilux/builtin_routines/ --cov=routilux.builtin_routines --cov-report=html
 
 All tests coverage:
 
 .. code-block:: bash
 
-   pytest --cov=flowforge --cov-report=html tests/ flowforge/builtin_routines/
+   pytest --cov=routilux --cov-report=html tests/ routilux/builtin_routines/
 
 Test Coverage
 -------------
@@ -254,13 +254,13 @@ Quick Reference
 
 .. code-block:: bash
 
-   pytest flowforge/builtin_routines/ -v
+   pytest routilux/builtin_routines/ -v
 
 **Run All Tests**:
 
 .. code-block:: bash
 
-   pytest tests/ flowforge/builtin_routines/ -v
+   pytest tests/ routilux/builtin_routines/ -v
 
 For more details, see ``tests/README.md`` in the project root.
 

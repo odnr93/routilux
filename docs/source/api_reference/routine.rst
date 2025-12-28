@@ -1,7 +1,7 @@
 Routine API
 ============
 
-The ``Routine`` class is the base class for all routines in FlowForge. It provides
+The ``Routine`` class is the base class for all routines in Routilux. It provides
 core functionality for slots, events, statistics tracking, and configuration management.
 
 Key Features
@@ -12,7 +12,7 @@ Key Features
 * **Configuration Management**: Store configuration in ``_config`` dictionary
 * **Statistics Tracking**: Track execution metrics in ``_stats`` dictionary
 
-.. automodule:: flowforge.routine
+.. automodule:: routilux.routine
    :members:
    :undoc-members:
    :show-inheritance:

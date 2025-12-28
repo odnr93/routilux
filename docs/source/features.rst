@@ -1,7 +1,7 @@
 Features
 ========
 
-This document provides a comprehensive overview of flowforge features.
+This document provides a comprehensive overview of routilux features.
 
 Core Features
 -------------

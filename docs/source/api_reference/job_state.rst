@@ -1,7 +1,7 @@
 JobState API
 ============
 
-.. automodule:: flowforge.job_state
+.. automodule:: routilux.job_state
    :members:
    :undoc-members:
    :show-inheritance:

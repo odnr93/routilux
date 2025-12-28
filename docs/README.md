@@ -1,6 +1,6 @@
 # Documentation
 
-This directory contains the Sphinx documentation for flowforge.
+This directory contains the Sphinx documentation for routilux.
 
 ## Building the Documentation
 

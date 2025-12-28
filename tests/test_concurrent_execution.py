@@ -15,7 +15,7 @@ import time
 import threading
 import pytest
 from concurrent.futures import ThreadPoolExecutor
-from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
 
 class TestConcurrentExecutionBasic:

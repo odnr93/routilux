@@ -1,5 +1,5 @@
 """
-FlowForge setup.py
+Routilux setup.py
 
 Minimal setup.py for backward compatibility.
 All package metadata is defined in pyproject.toml.

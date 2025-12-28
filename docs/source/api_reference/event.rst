@@ -1,7 +1,7 @@
 Event API
 =========
 
-.. automodule:: flowforge.event
+.. automodule:: routilux.event
    :members:
    :undoc-members:
    :show-inheritance:

@@ -3,7 +3,7 @@
 Complex LLM Agent Flow Demo
 
 This demo simulates a complex LLM Agent workflow that processes user tasks.
-It demonstrates all FlowForge features including:
+It demonstrates all Routilux features including:
 - Multiple routines with slots and events
 - Complex data flow with parameter mapping
 - Error handling strategies (STOP, CONTINUE, RETRY, SKIP)
@@ -16,7 +16,7 @@ It demonstrates all FlowForge features including:
 import json
 import time
 from typing import Dict, Any, List, Optional
-from flowforge import (
+from routilux import (
     Flow, Routine, JobState, ErrorHandler, ErrorStrategy,
     ExecutionTracker
 )
@@ -611,9 +611,9 @@ def test_state_persistence(flow: Flow):
 def main():
     """Run all tests"""
     print("\n" + "="*70)
-    print("FlowForge Complex LLM Agent Demo")
+    print("Routilux Complex LLM Agent Demo")
     print("="*70)
-    print("\nThis demo tests all FlowForge features with a complex LLM Agent workflow.")
+    print("\nThis demo tests all Routilux features with a complex LLM Agent workflow.")
     
     # Create flow
     flow = create_complex_flow()

@@ -1,6 +1,6 @@
 # Documentation Guide
 
-This guide explains how to build and maintain the Sphinx documentation for flowforge.
+This guide explains how to build and maintain the Sphinx documentation for routilux.
 
 ## Quick Start
 
@@ -175,7 +175,7 @@ The project includes `.readthedocs.yml` for Read the Docs integration.
 
 If you see import errors when building:
 
-1. Ensure FlowForge is installed: `pip install -e .`
+1. Ensure Routilux is installed: `pip install -e .`
 2. Check `autodoc_mock_imports` in `conf.py`
 3. Install missing dependencies
 

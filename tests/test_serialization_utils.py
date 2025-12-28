@@ -5,13 +5,13 @@
 """
 import pytest
 import inspect
-from flowforge.serialization_utils import (
+from routilux.serialization_utils import (
     serialize_callable,
     deserialize_callable,
     get_routine_class_info,
     load_routine_class
 )
-from flowforge import Routine
+from routilux import Routine
 
 
 class TestSerializeCallable:
@@ -96,7 +96,7 @@ class TestDeserializeCallable:
     def test_deserialize_function(self):
         """测试反序列化函数"""
         # 使用一个在模块中定义的函数
-        from flowforge.routine import Routine
+        from routilux.routine import Routine
         
         # 序列化 Routine 类的方法
         serialized = serialize_callable(Routine.__init__)
@@ -215,7 +215,7 @@ class TestGetRoutineClassInfo:
         assert "class_name" in info
         assert "module" in info
         assert info["class_name"] == "CustomRoutine"
-        # 模块名可能是 flowforge 或 tests.test_serialization_utils
+        # 模块名可能是 routilux 或 tests.test_serialization_utils
         assert isinstance(info["module"], str)
         assert len(info["module"]) > 0
 
@@ -226,7 +226,7 @@ class TestLoadRoutineClass:
     def test_load_routine_class(self):
         """测试加载 Routine 类"""
         # 使用标准的 Routine 类，确保可以加载
-        from flowforge.routine import Routine
+        from routilux.routine import Routine
         
         routine = Routine()
         class_info = get_routine_class_info(routine)
@@ -248,7 +248,7 @@ class TestLoadRoutineClass:
         """测试加载无效类名"""
         # 使用一个存在的模块但无效的类名
         class_info = {
-            "module": "flowforge.routine",
+            "module": "routilux.routine",
             "class_name": "NonexistentClass12345"
         }
         result = load_routine_class(class_info)

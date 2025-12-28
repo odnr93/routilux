@@ -1,12 +1,12 @@
 Introduction
 ============
 
-FlowForge is a powerful, event-driven workflow orchestration framework designed for building
+Routilux is a powerful, event-driven workflow orchestration framework designed for building
 flexible and maintainable data processing pipelines. With its intuitive slot-and-event mechanism,
-FlowForge makes it easy to connect routines, manage state, and orchestrate complex workflows
+Routilux makes it easy to connect routines, manage state, and orchestrate complex workflows
 while maintaining clean separation of concerns.
 
-Why FlowForge?
+Why Routilux?
 --------------
 
 Building workflow-based applications can be challenging. You need to:
@@ -18,14 +18,14 @@ Building workflow-based applications can be challenging. You need to:
 * **Scale** with concurrent execution for I/O-bound operations
 * **Persist** workflows for recovery and resumption
 
-FlowForge addresses all these needs with a clean, Pythonic API that feels natural to use.
+Routilux addresses all these needs with a clean, Pythonic API that feels natural to use.
 
-What Makes FlowForge Special?
+What Makes Routilux Special?
 ------------------------------
 
 **🎯 Event-Driven Architecture**
 
-FlowForge uses a clear slot-and-event mechanism where routines communicate through well-defined
+Routilux uses a clear slot-and-event mechanism where routines communicate through well-defined
 interfaces. This makes your workflows easy to understand, test, and maintain.
 
 .. code-block:: python
@@ -45,7 +45,7 @@ interfaces. This makes your workflows easy to understand, test, and maintain.
 **🔗 Flexible Connections**
 
 Connect routines in any pattern you need - one-to-many, many-to-one, or complex branching patterns.
-FlowForge handles the complexity while you focus on your business logic.
+Routilux handles the complexity while you focus on your business logic.
 
 .. code-block:: python
 
@@ -59,7 +59,7 @@ FlowForge handles the complexity while you focus on your business logic.
 
 **📊 Built-in Routines**
 
-FlowForge comes with a rich set of built-in routines ready to use:
+Routilux comes with a rich set of built-in routines ready to use:
 
 * **Text Processing**: ``TextClipper``, ``TextRenderer``, ``ResultExtractor``
 * **Data Processing**: ``DataTransformer``, ``DataValidator``, ``DataFlattener``
@@ -68,7 +68,7 @@ FlowForge comes with a rich set of built-in routines ready to use:
 
 .. code-block:: python
 
-   from flowforge.builtin_routines import TextClipper, ConditionalRouter
+   from routilux.builtin_routines import TextClipper, ConditionalRouter
    
    clipper = TextClipper()
    clipper.set_config(max_length=1000)
@@ -81,7 +81,7 @@ FlowForge comes with a rich set of built-in routines ready to use:
 
 **⚡ Concurrent Execution**
 
-For I/O-bound operations, FlowForge supports concurrent execution with thread pools,
+For I/O-bound operations, Routilux supports concurrent execution with thread pools,
 automatically parallelizing independent routines.
 
 .. code-block:: python
@@ -96,7 +96,7 @@ workflows that handle failures gracefully.
 
 .. code-block:: python
 
-   from flowforge import ErrorHandler, ErrorStrategy
+   from routilux import ErrorHandler, ErrorStrategy
    
    error_handler = ErrorHandler(
        strategy=ErrorStrategy.RETRY,
@@ -139,7 +139,7 @@ Key Features
 Architecture
 ------------
 
-FlowForge is built around a few core concepts:
+Routilux is built around a few core concepts:
 
 **Routine**
    The fundamental building block. A routine can have:
@@ -179,7 +179,7 @@ Design Principles
 Real-World Use Cases
 --------------------
 
-FlowForge is ideal for:
+Routilux is ideal for:
 
 * **Data Processing Pipelines**: ETL workflows, data transformation, validation
 * **API Orchestration**: Coordinating multiple API calls, handling responses
@@ -196,7 +196,7 @@ or dive into the :doc:`user_guide/index` for detailed documentation.
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine
+   from routilux import Flow, Routine
    
    class MyRoutine(Routine):
        def __init__(self):
@@ -209,7 +209,7 @@ or dive into the :doc:`user_guide/index` for detailed documentation.
    
    flow = Flow()
    routine_id = flow.add_routine(MyRoutine(), "my_routine")
-   flow.execute(routine_id, entry_params={"data": "Hello, FlowForge!"})
+   flow.execute(routine_id, entry_params={"data": "Hello, Routilux!"})
 
 Next Steps
 ----------

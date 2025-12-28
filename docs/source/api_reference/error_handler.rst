@@ -1,7 +1,7 @@
 ErrorHandler API
 ================
 
-.. automodule:: flowforge.error_handler
+.. automodule:: routilux.error_handler
    :members:
    :undoc-members:
    :show-inheritance:

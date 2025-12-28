@@ -1,7 +1,7 @@
 Flow API
 ========
 
-.. automodule:: flowforge.flow
+.. automodule:: routilux.flow
    :members:
    :undoc-members:
    :show-inheritance:

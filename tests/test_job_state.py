@@ -4,7 +4,7 @@ JobState 测试用例
 import pytest
 from datetime import datetime
 
-from flowforge import JobState
+from routilux import JobState
 class TestJobStateManagement:
     """JobState 状态管理测试"""
     

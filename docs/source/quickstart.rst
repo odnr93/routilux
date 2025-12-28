@@ -1,28 +1,28 @@
 Quick Start Guide
 =================
 
-This guide will help you get started with FlowForge quickly. We'll cover everything from
+This guide will help you get started with Routilux quickly. We'll cover everything from
 basic concepts to advanced features, with practical examples you can run immediately.
 
 Installation
 ------------
 
-Install FlowForge using pip:
+Install Routilux using pip:
 
 .. code-block:: bash
 
-   pip install flowforge
+   pip install routilux
 
 For development with all dependencies:
 
 .. code-block:: bash
 
-   pip install flowforge[dev]
+   pip install routilux[dev]
 
 Basic Concepts
 --------------
 
-FlowForge is built around a few simple concepts:
+Routilux is built around a few simple concepts:
 
 * **Routine**: A unit of work that can receive input through slots and emit output through events
 * **Flow**: A manager that orchestrates multiple routines and their connections
@@ -37,7 +37,7 @@ Let's create a simple routine that processes data:
 
 .. code-block:: python
 
-   from flowforge import Routine
+   from routilux import Routine
 
    class DataProcessor(Routine):
        def __init__(self):
@@ -67,7 +67,7 @@ Now let's create a flow and connect routines:
 
 .. code-block:: python
 
-   from flowforge import Flow
+   from routilux import Flow
 
    # Create a flow
    flow = Flow(flow_id="my_flow")
@@ -102,12 +102,12 @@ Execute the flow with entry parameters:
 Using Built-in Routines
 -----------------------
 
-FlowForge comes with many built-in routines ready to use. Let's use ``TextClipper`` to clip text:
+Routilux comes with many built-in routines ready to use. Let's use ``TextClipper`` to clip text:
 
 .. code-block:: python
 
-   from flowforge import Flow
-   from flowforge.builtin_routines import TextClipper, TextRenderer
+   from routilux import Flow
+   from routilux.builtin_routines import TextClipper, TextRenderer
 
    flow = Flow()
    
@@ -139,8 +139,8 @@ Using Conditional Router
 
 .. code-block:: python
 
-   from flowforge import Flow
-   from flowforge.builtin_routines import ConditionalRouter
+   from routilux import Flow
+   from routilux.builtin_routines import ConditionalRouter
 
    flow = Flow()
    
@@ -173,7 +173,7 @@ When multiple events connect to the same slot, you can control how data is merge
 
 .. code-block:: python
 
-   from flowforge import Routine
+   from routilux import Routine
 
    class Aggregator(Routine):
        def __init__(self):
@@ -205,7 +205,7 @@ For I/O-bound operations, use concurrent execution to run multiple routines in p
 
 .. code-block:: python
 
-   from flowforge import Flow
+   from routilux import Flow
 
    # Create a concurrent flow
    flow = Flow(
@@ -242,7 +242,7 @@ Configure error handling strategies for robust workflows:
 
 .. code-block:: python
 
-   from flowforge import Flow, ErrorHandler, ErrorStrategy
+   from routilux import Flow, ErrorHandler, ErrorStrategy
 
    flow = Flow()
    
@@ -314,7 +314,7 @@ Serialize and deserialize flows for persistence:
 
 .. code-block:: python
 
-   from flowforge import Flow
+   from routilux import Flow
    import json
 
    # Create and configure flow
@@ -387,9 +387,9 @@ Here's a complete example combining multiple features:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine
-   from flowforge.builtin_routines import TextRenderer, ConditionalRouter
-   from flowforge import ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine
+   from routilux.builtin_routines import TextRenderer, ConditionalRouter
+   from routilux import ErrorHandler, ErrorStrategy
 
    # Define custom routine
    class DataValidator(Routine):
@@ -457,4 +457,4 @@ Tips for Success
 * **Monitor Stats**: Use ``stats()`` to understand routine behavior
 * **Read Documentation**: Check the user guide for advanced features
 
-Happy coding with FlowForge! 🚀
+Happy coding with Routilux! 🚀

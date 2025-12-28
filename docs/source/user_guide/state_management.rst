@@ -1,7 +1,7 @@
 State Management
 ================
 
-flowforge provides comprehensive state management through JobState and ExecutionTracker.
+routilux provides comprehensive state management through JobState and ExecutionTracker.
 
 JobState
 --------
@@ -10,7 +10,7 @@ JobState tracks the execution state of a flow:
 
 .. code-block:: python
 
-   from flowforge import JobState
+   from routilux import JobState
 
    job_state = JobState(flow_id="my_flow")
 

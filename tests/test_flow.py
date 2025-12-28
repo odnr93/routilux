@@ -3,7 +3,7 @@ Flow 测试用例
 """
 
 import pytest
-from flowforge import Flow, Routine
+from routilux import Flow, Routine
 class TestFlowManagement:
     """Flow 管理测试"""
     

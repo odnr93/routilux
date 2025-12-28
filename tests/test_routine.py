@@ -3,7 +3,7 @@ Routine 测试用例
 """
 import pytest
 
-from flowforge import Routine
+from routilux import Routine
 
 
 class TestRoutineBasic:

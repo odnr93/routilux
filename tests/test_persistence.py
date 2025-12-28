@@ -4,8 +4,8 @@
 import pytest
 import json
 import os
-from flowforge import Flow, Routine, JobState
-from flowforge.utils.serializable import SerializableRegistry
+from routilux import Flow, Routine, JobState
+from routilux.utils.serializable import SerializableRegistry
 class TestFlowPersistence:
     """Flow 持久化测试"""
     

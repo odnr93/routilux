@@ -3,7 +3,7 @@ Event 测试用例
 """
 import pytest
 
-from flowforge import Routine
+from routilux import Routine
 class TestEventConnection:
     """Event 连接管理测试"""
     
@@ -96,7 +96,7 @@ class TestEventEmission:
         routine1.get_event("output").connect(slot2)
         
         # 触发事件（需要通过 Flow 来正确触发）
-        from flowforge import Flow
+        from routilux import Flow
         flow = Flow()
         flow.add_routine(routine1, "r1")
         flow.add_routine(routine, "r2")
@@ -165,7 +165,7 @@ class TestEventDataFlow:
         routine1.get_event("output").connect(slot)
         
         # 触发事件，传递多个参数（需要通过 Flow）
-        from flowforge import Flow
+        from routilux import Flow
         flow = Flow()
         flow.add_routine(routine1, "r1")
         flow.add_routine(routine, "r2")

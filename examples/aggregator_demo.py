@@ -4,7 +4,7 @@ Aggregator Routine Demo
 Demonstrates how to create a routine that waits for all expected messages
 before processing and emitting results.
 """
-from flowforge import Flow, Routine
+from routilux import Flow, Routine
 import time
 
 

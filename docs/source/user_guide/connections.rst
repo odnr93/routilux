@@ -111,7 +111,7 @@ The default strategy completely replaces existing data with new data.
 
 .. code-block:: python
 
-   from flowforge import Routine
+   from routilux import Routine
    
    class MyRoutine(Routine):
        def __init__(self):
@@ -328,7 +328,7 @@ You can also create connections directly:
 
 .. code-block:: python
 
-   from flowforge import Connection
+   from routilux import Connection
 
    connection = Connection(event, slot, param_mapping={"param1": "param2"})
 

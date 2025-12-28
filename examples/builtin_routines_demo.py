@@ -1,10 +1,10 @@
 """
 Demo of built-in routines usage.
 
-This example demonstrates how to use the built-in routines in FlowForge.
+This example demonstrates how to use the built-in routines in Routilux.
 """
-from flowforge import Flow
-from flowforge.builtin_routines import (
+from routilux import Flow
+from routilux.builtin_routines import (
     TextClipper,
     TextRenderer,
     TimeProvider,

@@ -1,7 +1,7 @@
 Built-in Routines
 =================
 
-FlowForge provides a comprehensive set of built-in routines that are generic and reusable
+Routilux provides a comprehensive set of built-in routines that are generic and reusable
 across different business domains. These routines are organized by category and can be
 easily integrated into your workflows.
 
@@ -38,8 +38,8 @@ Clips text to a maximum length while preserving important information like trace
 
 .. code-block:: python
 
-   from flowforge.builtin_routines.text_processing import TextClipper
-   from flowforge import Flow
+   from routilux.builtin_routines.text_processing import TextClipper
+   from routilux import Flow
 
    clipper = TextClipper()
    clipper.set_config(max_length=1000, preserve_tracebacks=True)
@@ -75,7 +75,7 @@ Renders objects into formatted text with XML-like tags or markdown format.
 
 .. code-block:: python
 
-   from flowforge.builtin_routines.text_processing import TextRenderer
+   from routilux.builtin_routines.text_processing import TextRenderer
 
    renderer = TextRenderer()
    renderer.set_config(tag_format="xml", indent="  ")
@@ -110,7 +110,7 @@ Extracts and formats results from various output formats with extensible archite
 
 .. code-block:: python
 
-   from flowforge.builtin_routines.text_processing import ResultExtractor
+   from routilux.builtin_routines.text_processing import ResultExtractor
 
    extractor = ResultExtractor()
    extractor.set_config(
@@ -154,8 +154,8 @@ Provides current time in various formats (ISO, formatted, timestamp, custom).
 
 .. code-block:: python
 
-   from flowforge.builtin_routines.utils import TimeProvider
-   from flowforge import Flow
+   from routilux.builtin_routines.utils import TimeProvider
+   from routilux import Flow
 
    time_provider = TimeProvider()
    time_provider.set_config(format="iso", locale="zh_CN")
@@ -187,7 +187,7 @@ Flattens nested data structures into flat dictionaries.
 
 .. code-block:: python
 
-   from flowforge.builtin_routines.utils import DataFlattener
+   from routilux.builtin_routines.utils import DataFlattener
 
    flattener = DataFlattener()
    flattener.set_config(separator=".", max_depth=100, preserve_lists=True)
@@ -222,7 +222,7 @@ Transforms data using configurable transformation functions.
 
 .. code-block:: python
 
-   from flowforge.builtin_routines.data_processing import DataTransformer
+   from routilux.builtin_routines.data_processing import DataTransformer
 
    transformer = DataTransformer()
    transformer.set_config(transformations=["lowercase", "strip"])
@@ -261,7 +261,7 @@ Validates data against schemas or validation rules.
 
 .. code-block:: python
 
-   from flowforge.builtin_routines.data_processing import DataValidator
+   from routilux.builtin_routines.data_processing import DataValidator
 
    validator = DataValidator()
    validator.set_config(
@@ -320,8 +320,8 @@ String expressions (recommended):
 
 .. code-block:: python
 
-   from flowforge.builtin_routines.control_flow import ConditionalRouter
-   from flowforge import Flow
+   from routilux.builtin_routines.control_flow import ConditionalRouter
+   from routilux import Flow
 
    router = ConditionalRouter()
    router.set_config(

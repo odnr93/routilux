@@ -1,7 +1,7 @@
 Design Overview
 ===============
 
-FlowForge is an event-driven workflow orchestration framework that provides flexible connection mechanisms, state management, and workflow orchestration capabilities.
+Routilux is an event-driven workflow orchestration framework that provides flexible connection mechanisms, state management, and workflow orchestration capabilities.
 
 Core Improvements
 -----------------
@@ -63,7 +63,7 @@ Module Structure
 
 .. code-block:: text
 
-   flowforge/
+   routilux/
    ├── __init__.py
    ├── routine.py          # Routine base class
    ├── flow.py             # Flow manager

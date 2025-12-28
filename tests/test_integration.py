@@ -3,7 +3,7 @@
 """
 
 import pytest
-from flowforge import Flow, Routine
+from routilux import Flow, Routine
 class TestCompleteFlow:
     """完整流程测试"""
     

@@ -1,11 +1,11 @@
-.. FlowForge documentation master file
+.. Routilux documentation master file
 
-FlowForge Documentation
+Routilux Documentation
 ========================
 
-Welcome to FlowForge's documentation!
+Welcome to Routilux's documentation!
 
-FlowForge is an event-driven workflow orchestration framework with flexible connection, 
+Routilux is an event-driven workflow orchestration framework with flexible connection, 
 state management, and workflow orchestration capabilities.
 
 .. grid:: 2
@@ -18,7 +18,7 @@ state management, and workflow orchestration capabilities.
       
       **Getting Started**
       
-      Learn the basics and key concepts of FlowForge.
+      Learn the basics and key concepts of Routilux.
 
    .. grid-item-card::
       :link: quickstart
@@ -26,7 +26,7 @@ state management, and workflow orchestration capabilities.
       
       **Quick Start**
       
-      Get up and running with FlowForge in minutes.
+      Get up and running with Routilux in minutes.
 
    .. grid-item-card::
       :link: user_guide/index
@@ -34,7 +34,7 @@ state management, and workflow orchestration capabilities.
       
       **User Guide**
       
-      Comprehensive guide to using FlowForge features.
+      Comprehensive guide to using Routilux features.
 
    .. grid-item-card::
       :link: api_reference/index

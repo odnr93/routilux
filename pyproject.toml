@@ -3,14 +3,14 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "flowforge"
+name = "routilux"
 dynamic = ["version"]
 description = "Event-driven workflow orchestration framework with flexible connection, state management, and workflow orchestration capabilities"
 readme = "README.md"
 requires-python = ">=3.7"
 license = "Apache-2.0"
 authors = [
-    {name = "FlowForge Team"}
+    {name = "Routilux Team"}
 ]
 keywords = ["workflow", "orchestration", "event-driven", "state-management", "flow"]
 classifiers = [
@@ -50,10 +50,10 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/lzjever/flowforge"
-Documentation = "https://flowforge.readthedocs.io"
-Repository = "https://github.com/lzjever/flowforge"
-Issues = "https://github.com/lzjever/flowforge/issues"
+Homepage = "https://github.com/lzjever/routilux"
+Documentation = "https://routilux.readthedocs.io"
+Repository = "https://github.com/lzjever/routilux"
+Issues = "https://github.com/lzjever/routilux/issues"
 
 [tool.setuptools.packages.find]
 exclude = [
@@ -61,17 +61,17 @@ exclude = [
     "examples*", 
     "docs*",
     "*.tests*",
-    "flowforge.builtin_routines.control_flow.tests*",
-    "flowforge.builtin_routines.data_processing.tests*",
-    "flowforge.builtin_routines.text_processing.tests*",
-    "flowforge.builtin_routines.utils.tests*",
+    "routilux.builtin_routines.control_flow.tests*",
+    "routilux.builtin_routines.data_processing.tests*",
+    "routilux.builtin_routines.text_processing.tests*",
+    "routilux.builtin_routines.utils.tests*",
 ]
 
 [tool.setuptools.dynamic]
-version = {attr = "flowforge.__version__"}
+version = {attr = "routilux.__version__"}
 
 [tool.setuptools.package-data]
-flowforge = ["py.typed"]
+routilux = ["py.typed"]
 
 [tool.black]
 line-length = 100
@@ -93,7 +93,7 @@ disallow_untyped_defs = false
 ignore_missing_imports = true
 
 [tool.coverage.run]
-source = ["flowforge"]
+source = ["routilux"]
 omit = ["*/tests/*", "*/test_*.py"]
 
 [tool.coverage.report]

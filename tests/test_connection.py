@@ -3,7 +3,7 @@ Connection 测试用例
 """
 import pytest
 
-from flowforge import Routine, Connection
+from routilux import Routine, Connection
 class TestConnectionCreation:
     """连接创建测试"""
     

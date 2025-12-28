@@ -3,7 +3,7 @@ Test cases for aggregator pattern - waiting for all expected messages.
 """
 import pytest
 import time
-from flowforge import Flow, Routine
+from routilux import Flow, Routine
 
 
 class SourceRoutine(Routine):

@@ -5,7 +5,7 @@ This test suite verifies the execution order behavior when an event emits
 to multiple connected slots, especially when downstream slots emit further events.
 """
 import pytest
-from flowforge import Flow, Routine, Event, Slot
+from routilux import Flow, Routine, Event, Slot
 
 
 class ExecutionOrderTracker:

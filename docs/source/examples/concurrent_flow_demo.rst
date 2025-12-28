@@ -1,7 +1,7 @@
 Concurrent Flow Demo
 ====================
 
-This example demonstrates FlowForge's concurrent execution capabilities, showing how multiple routines can execute in parallel to improve performance.
+This example demonstrates Routilux's concurrent execution capabilities, showing how multiple routines can execute in parallel to improve performance.
 
 Overview
 --------

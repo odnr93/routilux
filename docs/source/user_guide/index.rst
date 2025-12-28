@@ -1,7 +1,7 @@
 User Guide
 ==========
 
-This section provides detailed guidance on using flowforge.
+This section provides detailed guidance on using routilux.
 
 .. toctree::
    :maxdepth: 2

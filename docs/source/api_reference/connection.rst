@@ -1,7 +1,7 @@
 Connection API
 ==============
 
-.. automodule:: flowforge.connection
+.. automodule:: routilux.connection
    :members:
    :undoc-members:
    :show-inheritance:

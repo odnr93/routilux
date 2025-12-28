@@ -6,7 +6,7 @@ Event 综合测试用例
 import pytest
 import threading
 import time
-from flowforge import Flow, Routine, Event, Slot, ErrorHandler, ErrorStrategy
+from routilux import Flow, Routine, Event, Slot, ErrorHandler, ErrorStrategy
 
 
 class TestEventConcurrentEmit:

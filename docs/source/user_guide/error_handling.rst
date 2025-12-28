@@ -1,7 +1,7 @@
 Error Handling and Exception Management
 ========================================
 
-FlowForge provides comprehensive error handling mechanisms to help you build robust
+Routilux provides comprehensive error handling mechanisms to help you build robust
 workflows that can gracefully handle failures. This guide explains how errors are
 handled in different scenarios and how to configure error handling strategies.
 
@@ -12,10 +12,10 @@ handled in different scenarios and how to configure error handling strategies.
 * **Intelligent retry**: Configurable retry with exponential backoff and exception filtering
 * **Priority system**: Routine-level handlers override flow-level handlers
 
-Understanding Error Handling in FlowForge
+Understanding Error Handling in Routilux
 ------------------------------------------
 
-Errors can occur in different places in a FlowForge workflow:
+Errors can occur in different places in a Routilux workflow:
 
 1. **Routine Execution Errors**: Errors raised in a routine's ``__call__`` method
    (entry point execution)
@@ -34,7 +34,7 @@ interrupting the flow.
 Error Handling Strategies
 -------------------------
 
-FlowForge provides four error handling strategies:
+Routilux provides four error handling strategies:
 
 **STOP** (Default)
    Stop execution immediately when an error occurs. The flow status is set to
@@ -59,7 +59,7 @@ Create an error handler with a strategy:
 
 .. code-block:: python
 
-   from flowforge import ErrorHandler, ErrorStrategy
+   from routilux import ErrorHandler, ErrorStrategy
 
    # Stop on error (default)
    error_handler = ErrorHandler(strategy=ErrorStrategy.STOP)
@@ -98,7 +98,7 @@ Set the default error handler for a flow:
 
 .. code-block:: python
 
-   from flowforge import Flow, ErrorHandler, ErrorStrategy
+   from routilux import Flow, ErrorHandler, ErrorStrategy
 
    flow = Flow()
    
@@ -116,7 +116,7 @@ different error handling strategies:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
    import random
 
    class UnreliableRoutine(Routine):
@@ -145,7 +145,7 @@ different error handling strategies:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class DataSource(Routine):
        def __init__(self):
@@ -236,7 +236,7 @@ STOP Strategy
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class FailingRoutine(Routine):
        def __call__(self):
@@ -267,7 +267,7 @@ CONTINUE Strategy
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class UnreliableRoutine(Routine):
        def __init__(self):
@@ -327,7 +327,7 @@ RETRY Strategy
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
    import time
 
    class NetworkRoutine(Routine):
@@ -365,7 +365,7 @@ RETRY Strategy
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
    import time
 
    class APIClient(Routine):
@@ -407,7 +407,7 @@ RETRY Strategy
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class MixedErrorRoutine(Routine):
        def __init__(self):
@@ -464,7 +464,7 @@ Some errors indicate permanent failures that won't succeed on retry:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class DatabaseRoutine(Routine):
        def __call__(self):
@@ -526,7 +526,7 @@ SKIP Strategy
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class OptionalRoutine(Routine):
        def __init__(self):
@@ -567,7 +567,7 @@ SKIP Strategy
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class EnhancementRoutine(Routine):
        """Optional enhancement - use SKIP if it fails"""
@@ -629,7 +629,7 @@ execution errors.
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine
+   from routilux import Flow, Routine
 
    class DataProcessor(Routine):
        def __init__(self):
@@ -684,7 +684,7 @@ priority over flow-level error handlers.
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class OptionalRoutine(Routine):
        def __call__(self):
@@ -721,7 +721,7 @@ priority over flow-level error handlers.
 Critical and Optional Routines
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-FlowForge provides convenience methods to mark routines as critical or optional,
+Routilux provides convenience methods to mark routines as critical or optional,
 making it easy to express the importance of different routines in your workflow.
 
 **Optional Routines**:
@@ -741,7 +741,7 @@ making it easy to express the importance of different routines in your workflow.
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorStrategy
+   from routilux import Flow, Routine, ErrorStrategy
 
    class OptionalRoutine(Routine):
        def __call__(self):
@@ -773,7 +773,7 @@ making it easy to express the importance of different routines in your workflow.
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorStrategy
+   from routilux import Flow, Routine, ErrorStrategy
 
    class DataFetcher(Routine):
        """Critical: Must fetch data successfully"""
@@ -892,7 +892,7 @@ For RETRY strategy:
 
 .. code-block:: python
 
-   from flowforge import ErrorHandler, ErrorStrategy
+   from routilux import ErrorHandler, ErrorStrategy
 
    # Non-critical routine - retry failures may be tolerated depending on strategy
    handler1 = ErrorHandler(
@@ -925,7 +925,7 @@ important considerations:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class UnreliableRoutine(Routine):
        def __init__(self, name):
@@ -1062,7 +1062,7 @@ Real-World Examples
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine
+   from routilux import Flow, Routine
 
    class PaymentProcessor(Routine):
        """Critical: Payment must succeed"""
@@ -1150,7 +1150,7 @@ Real-World Examples
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorStrategy
+   from routilux import Flow, Routine, ErrorStrategy
 
    class PrimaryDataSource(Routine):
        """Critical: Primary data source"""
@@ -1215,7 +1215,7 @@ Real-World Examples
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class APIGateway(Routine):
        def __init__(self):
@@ -1260,7 +1260,7 @@ Use exponential backoff for network operations or rate-limited APIs:
 
 .. code-block:: python
 
-   from flowforge import ErrorHandler, ErrorStrategy
+   from routilux import ErrorHandler, ErrorStrategy
 
    error_handler = ErrorHandler(
        strategy=ErrorStrategy.RETRY,
@@ -1278,7 +1278,7 @@ Allow workflow to complete even if some operations fail:
 
 .. code-block:: python
 
-   from flowforge import Flow, ErrorHandler, ErrorStrategy
+   from routilux import Flow, ErrorHandler, ErrorStrategy
 
    error_handler = ErrorHandler(strategy=ErrorStrategy.CONTINUE)
    flow.set_error_handler(error_handler)
@@ -1299,7 +1299,7 @@ Skip optional processing steps that aren't critical:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class MainProcessor(Routine):
        def __init__(self):
@@ -1337,7 +1337,7 @@ Only retry errors that might succeed on retry:
 
 .. code-block:: python
 
-   from flowforge import ErrorHandler, ErrorStrategy
+   from routilux import ErrorHandler, ErrorStrategy
 
    error_handler = ErrorHandler(
        strategy=ErrorStrategy.RETRY,
@@ -1354,7 +1354,7 @@ Combine critical and optional routines in a single workflow:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine
+   from routilux import Flow, Routine
 
    class DataFetcher(Routine):
        def __init__(self):
@@ -1411,7 +1411,7 @@ Override flow-level handler for specific routines:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class NetworkRoutine(Routine):
        def __call__(self):
@@ -1451,7 +1451,7 @@ This example shows a complete e-commerce order processing workflow with proper e
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorStrategy
+   from routilux import Flow, Routine, ErrorStrategy
    import random
 
    class OrderValidator(Routine):
@@ -1580,7 +1580,7 @@ This example shows a data pipeline with primary and fallback data sources:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class PrimaryDataSource(Routine):
        """Critical: Primary data source"""
@@ -1652,7 +1652,7 @@ This example shows error handling in a microservices architecture:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
    class UserService(Routine):
        """Critical: User authentication"""

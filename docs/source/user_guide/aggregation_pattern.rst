@@ -43,7 +43,7 @@ Here's a simple aggregator that waits for 3 messages:
 
 .. code-block:: python
 
-   from flowforge import Flow, Routine
+   from routilux import Flow, Routine
 
    class SourceRoutine(Routine):
        def __init__(self, source_id: str):

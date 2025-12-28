@@ -2,7 +2,7 @@
 Test retryable_exceptions functionality in ErrorHandler.
 """
 import pytest
-from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 
 
 class TestRetryableExceptions:

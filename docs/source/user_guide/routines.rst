@@ -1,7 +1,7 @@
 Working with Routines
 =====================
 
-Routines are the core building blocks of flowforge. This guide explains how to create and use routines.
+Routines are the core building blocks of routilux. This guide explains how to create and use routines.
 
 Creating a Routine
 ------------------
@@ -10,7 +10,7 @@ To create a routine, inherit from ``Routine``:
 
 .. code-block:: python
 
-   from flowforge import Routine
+   from routilux import Routine
 
    class MyRoutine(Routine):
        def __init__(self):

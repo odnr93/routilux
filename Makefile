@@ -49,21 +49,21 @@ test:
 	pytest tests/ -v
 
 test-builtin:
-	pytest flowforge/builtin_routines/ -v
+	pytest routilux/builtin_routines/ -v
 
 test-all: test test-builtin
 
 test-cov:
-	pytest tests/ flowforge/builtin_routines/ --cov=flowforge --cov-report=html --cov-report=term
+	pytest tests/ routilux/builtin_routines/ --cov=routilux --cov-report=html --cov-report=term
 
 lint:
-	flake8 flowforge/ tests/ examples/ --max-line-length=100 --extend-ignore=E203,W503
+	flake8 routilux/ tests/ examples/ --max-line-length=100 --extend-ignore=E203,W503
 
 format:
-	black flowforge/ tests/ examples/
+	black routilux/ tests/ examples/
 
 format-check:
-	black --check flowforge/ tests/ examples/
+	black --check routilux/ tests/ examples/
 
 check: lint format-check test
 	@echo "All checks passed!"

@@ -1,7 +1,7 @@
 Examples
 ========
 
-This section contains practical examples demonstrating flowforge usage.
+This section contains practical examples demonstrating routilux usage.
 
 .. toctree::
    :maxdepth: 2
