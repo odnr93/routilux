@@ -2,16 +2,26 @@
 并发执行测试运行脚本
 
 在没有 pytest 的情况下，可以运行此脚本来验证并发执行功能。
+
+注意：此脚本需要 flowforge 包已安装。
+安装方法：pip install -e .
 """
 import sys
 import time
 import threading
 from pathlib import Path
 
-# 添加项目路径
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Try to import flowforge - if it fails, provide helpful error message
+try:
+    from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
+except ImportError:
+    print("Error: flowforge package not found!")
+    print("Please install the package first:")
+    print("  pip install -e .")
+    print("\nOr if you're in development mode:")
+    print("  pip install -e '.[dev]'")
+    sys.exit(1)
 
-from flowforge import Flow, Routine, ErrorHandler, ErrorStrategy
 from concurrent.futures import ThreadPoolExecutor
 
 

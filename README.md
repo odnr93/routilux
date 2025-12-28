@@ -15,14 +15,31 @@ Event-driven workflow orchestration framework with flexible connection, state ma
 
 ## Installation
 
+### For Development (Recommended)
+
+```bash
+# Install package in editable mode with development dependencies
+pip install -e ".[dev]"
+
+# Or using Makefile
+make dev-install
+```
+
+This installs the package in "editable" mode, meaning:
+- Changes to source code are immediately available
+- No need to reinstall after code changes
+- All imports work correctly without `sys.path` manipulation
+
+### For Production
+
 ```bash
 pip install -e .
 ```
 
-For development with all dependencies:
+Or install from a built package:
 
 ```bash
-pip install -e ".[dev]"
+pip install dist/flowforge-*.whl
 ```
 
 ## Quick Start

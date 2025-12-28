@@ -2,17 +2,14 @@
 Comprehensive test cases for built-in routines.
 
 Tests all routines to ensure they work correctly and handle edge cases.
+
+Note: This test requires flowforge package to be installed.
+Install with: pip install -e .
 """
 import unittest
 import time
 from unittest.mock import Mock, patch, MagicMock
 from flowforge import Flow
-import sys
-from pathlib import Path
-
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
-
 from flowforge.builtin_routines.text_processing import (
     TextClipper,
     TextRenderer,
