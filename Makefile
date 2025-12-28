@@ -1,4 +1,4 @@
-.PHONY: help clean install dev-install test test-builtin test-all test-cov lint format check build sdist wheel docs html clean-docs
+.PHONY: help clean install dev-install test test-builtin test-all test-cov lint format check build sdist wheel docs html clean-docs test-rtd
 
 help:
 	@echo "Available targets:"
@@ -16,6 +16,7 @@ help:
 	@echo "  wheel         - Build wheel distribution"
 	@echo "  docs          - Build documentation"
 	@echo "  html          - Build HTML documentation"
+	@echo "  test-rtd      - Test Read the Docs configuration locally"
 	@echo "  clean         - Clean build artifacts"
 	@echo "  clean-docs    - Clean documentation build"
 
@@ -62,6 +63,26 @@ docs:
 
 html:
 	cd docs && make html
+
+test-rtd:
+	@echo "Testing Read the Docs configuration locally..."
+	@echo "Step 1: Installing package with docs dependencies..."
+	pip install -e ".[docs]"
+	@echo "Step 2: Building documentation (simulating Read the Docs build)..."
+	@echo "  Note: Warnings are allowed (Read the Docs uses fail_on_warning: false)"
+	cd docs && sphinx-build -b html source build/html || { \
+		echo "✗ Documentation build failed! Check errors above."; \
+		exit 1; \
+	}
+	@echo "Step 3: Checking for build output..."
+	@if [ -f docs/build/html/index.html ]; then \
+		echo "✓ Documentation built successfully!"; \
+		echo "  Output: docs/build/html/index.html"; \
+		echo "  To view: python3 -m http.server 8000 -d docs/build/html"; \
+	else \
+		echo "✗ Build output not found!"; \
+		exit 1; \
+	fi
 
 clean:
 	rm -rf build/
