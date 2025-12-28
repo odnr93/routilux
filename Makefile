@@ -1,4 +1,4 @@
-.PHONY: help clean install dev-install test test-builtin docs html clean-docs
+.PHONY: help clean install dev-install test test-builtin test-all test-cov lint format check build sdist wheel docs html clean-docs
 
 help:
 	@echo "Available targets:"
@@ -6,6 +6,14 @@ help:
 	@echo "  dev-install   - Install with development dependencies"
 	@echo "  test          - Run tests"
 	@echo "  test-builtin  - Run built-in routines tests"
+	@echo "  test-all      - Run all tests (main + builtin)"
+	@echo "  test-cov      - Run tests with coverage report"
+	@echo "  lint          - Run linting checks (flake8)"
+	@echo "  format        - Format code with black"
+	@echo "  check         - Run all checks (lint + format check + tests)"
+	@echo "  build         - Build source and wheel distributions"
+	@echo "  sdist         - Build source distribution"
+	@echo "  wheel         - Build wheel distribution"
 	@echo "  docs          - Build documentation"
 	@echo "  html          - Build HTML documentation"
 	@echo "  clean         - Clean build artifacts"
@@ -22,6 +30,32 @@ test:
 
 test-builtin:
 	pytest flowforge/builtin_routines/ -v
+
+test-all: test test-builtin
+
+test-cov:
+	pytest tests/ flowforge/builtin_routines/ --cov=flowforge --cov-report=html --cov-report=term
+
+lint:
+	flake8 flowforge/ tests/ examples/ --max-line-length=100 --extend-ignore=E203,W503
+
+format:
+	black flowforge/ tests/ examples/
+
+format-check:
+	black --check flowforge/ tests/ examples/
+
+check: lint format-check test
+	@echo "All checks passed!"
+
+build: clean
+	python -m build
+
+sdist: clean
+	python -m build --sdist
+
+wheel: clean
+	python -m build --wheel
 
 docs:
 	cd docs && make html

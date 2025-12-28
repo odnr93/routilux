@@ -1,14 +1,14 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "flowforge"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Event-driven workflow orchestration framework with flexible connection, state management, and workflow orchestration capabilities"
 readme = "README.md"
 requires-python = ">=3.7"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 authors = [
     {name = "FlowForge Team"}
 ]
@@ -16,7 +16,6 @@ keywords = ["workflow", "orchestration", "event-driven", "state-management", "fl
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
@@ -53,8 +52,20 @@ Documentation = "https://flowforge.readthedocs.io"
 Repository = "https://github.com/flowforge/flowforge"
 Issues = "https://github.com/flowforge/flowforge/issues"
 
-[tool.setuptools]
-packages = ["flowforge"]
+[tool.setuptools.packages.find]
+exclude = [
+    "tests*",
+    "examples*", 
+    "docs*",
+    "*.tests*",
+    "flowforge.builtin_routines.control_flow.tests*",
+    "flowforge.builtin_routines.data_processing.tests*",
+    "flowforge.builtin_routines.text_processing.tests*",
+    "flowforge.builtin_routines.utils.tests*",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "flowforge.__version__"}
 
 [tool.setuptools.package-data]
 flowforge = ["py.typed"]
@@ -90,5 +101,20 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
+]
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    "*.egg-info",
+    ".venv",
+    "venv",
+    ".pytest_cache",
+    ".mypy_cache",
 ]
 
