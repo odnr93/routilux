@@ -82,9 +82,11 @@ class TestEventEmission:
         class Routine1(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="test")
 
         routine1 = Routine1()
@@ -157,9 +159,11 @@ class TestEventDataFlow:
         class Routine1(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["value1", "value2"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", value1="a", value2="b")
 
         routine1 = Routine1()

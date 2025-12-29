@@ -66,6 +66,26 @@ Execute a flow starting from an entry routine:
        entry_params={"data": "test"}
    )
 
+**Important**: The entry routine must have a "trigger" slot defined. Flow.execute()
+will call this slot with the provided entry_params. If the entry routine doesn't have
+a "trigger" slot, a ValueError will be raised.
+
+Example entry routine:
+
+.. code-block:: python
+
+   class EntryRoutine(Routine):
+       def __init__(self):
+           super().__init__()
+           # Define trigger slot - required for entry routines
+           self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+           self.output_event = self.define_event("output", ["data"])
+       
+       def _handle_trigger(self, **kwargs):
+           # This will be called by Flow.execute()
+           data = kwargs.get("data", "default")
+           self.emit("output", data=data)
+
 The execute method returns a ``JobState`` object that tracks the execution status.
 
 Concurrent Execution

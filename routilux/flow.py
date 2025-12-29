@@ -476,8 +476,11 @@ class Flow(Serializable):
             entry_routine_id: Identifier of the routine to start execution from.
                 This routine must exist in the flow (added via add_routine()).
             entry_params: Optional dictionary of parameters to pass to the entry
-                routine's __call__ method. These are passed as keyword arguments.
+                routine's trigger slot. These are passed as data to the trigger slot.
                 Example: {"data": "value", "count": 42}
+                
+                Note: The entry routine must have a "trigger" slot defined.
+                Define it using: routine.define_slot("trigger", handler=your_handler)
             execution_strategy: Optional execution strategy override.
                 If provided, temporarily overrides the flow's default strategy
                 for this execution only. Must be "sequential" or "concurrent".
@@ -571,8 +574,17 @@ class Flow(Serializable):
             job_state.record_execution(entry_routine_id, "start", entry_params)
             self.execution_tracker.record_routine_start(entry_routine_id, entry_params)
 
-            # Execute entry routine
-            entry_routine(**entry_params)
+            # Execute entry routine through trigger slot
+            # Entry routine must have a "trigger" slot to be executed
+            trigger_slot = entry_routine.get_slot("trigger")
+            if trigger_slot is None:
+                raise ValueError(
+                    f"Entry routine '{entry_routine_id}' must have a 'trigger' slot. "
+                    f"Define it using: routine.define_slot('trigger', handler=your_handler)"
+                )
+            # For entry routine trigger slot, call handler with exception propagation
+            # This allows Flow's error handling strategies to work correctly
+            trigger_slot.call_handler(entry_params or {}, propagate_exceptions=True)
 
             # Calculate execution time
             end_time = datetime.now()
@@ -632,9 +644,16 @@ class Flow(Serializable):
                     retry_success = False
                     # Already attempted once (initial call), need to retry max_retries more times
                     remaining_retries = error_handler.max_retries
+                    trigger_slot = entry_routine.get_slot("trigger")
+                    if trigger_slot is None:
+                        raise ValueError(
+                            f"Entry routine '{entry_routine_id}' must have a 'trigger' slot. "
+                            f"Define it using: routine.define_slot('trigger', handler=your_handler)"
+                        )
                     for attempt in range(remaining_retries):
                         try:
-                            entry_routine(**entry_params)
+                            # Call handler with exception propagation for retry logic
+                            trigger_slot.call_handler(entry_params or {}, propagate_exceptions=True)
                             retry_success = True
                             break
                         except Exception as retry_error:
@@ -742,8 +761,14 @@ class Flow(Serializable):
         error = None
 
         try:
-            # Execute routine (outside lock to avoid blocking)
-            result = routine(**params)
+            # Execute routine through trigger slot (outside lock to avoid blocking)
+            trigger_slot = routine.get_slot("trigger")
+            if trigger_slot is None:
+                raise ValueError(
+                    f"Routine '{routine_id}' must have a 'trigger' slot. "
+                    f"Define it using: routine.define_slot('trigger', handler=your_handler)"
+                )
+            trigger_slot.receive(params or {})
         except Exception as e:
             error = e
 
@@ -805,8 +830,15 @@ class Flow(Serializable):
                 for r in self.routines.values():
                     r._current_flow = self
 
-                # Execute routine
-                routine()
+                # Execute routine through trigger slot
+                trigger_slot = routine.get_slot("trigger")
+                if trigger_slot is None:
+                    raise ValueError(
+                        f"Routine '{job_state.current_routine_id}' must have a 'trigger' slot. "
+                        f"Define it using: routine.define_slot('trigger', handler=your_handler)"
+                    )
+                # Call handler with exception propagation for resume
+                trigger_slot.call_handler({}, propagate_exceptions=True)
 
                 job_state.status = "completed"
                 job_state.update_routine_state(
@@ -1041,6 +1073,6 @@ class Flow(Serializable):
                 # Rebuild mapping
                 key = (connection.source_event, connection.target_slot)
                 self._event_slot_connections[key] = connection
-
+        
         # Update connections list with only valid connections
         self.connections = valid_connections

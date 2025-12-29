@@ -18,7 +18,12 @@ class TestRoutineLevelErrorHandler:
         flow = Flow()
 
         class FailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 raise ValueError("Test error")
 
         routine = FailingRoutine()
@@ -40,7 +45,12 @@ class TestRoutineLevelErrorHandler:
         flow = Flow()
 
         class FailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 raise ValueError("Test error")
 
         routine = FailingRoutine()
@@ -61,7 +71,12 @@ class TestRoutineLevelErrorHandler:
         flow = Flow()
 
         class FailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 raise ValueError("Test error")
 
         routine = FailingRoutine()
@@ -83,7 +98,12 @@ class TestCriticalOptionalRoutines:
         flow = Flow()
 
         class OptionalRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 raise ValueError("Optional operation failed")
 
         optional = OptionalRoutine()
@@ -101,7 +121,12 @@ class TestCriticalOptionalRoutines:
         flow = Flow()
 
         class OptionalRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 raise ValueError("Optional operation failed")
 
         optional = OptionalRoutine()
@@ -120,7 +145,12 @@ class TestCriticalOptionalRoutines:
         call_count = [0]
 
         class CriticalRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 call_count[0] += 1
                 if call_count[0] < 2:
                     raise ConnectionError("Network error")
@@ -143,7 +173,12 @@ class TestCriticalOptionalRoutines:
         flow = Flow()
 
         class AlwaysFailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 raise ConnectionError("Always fails")
 
         critical = AlwaysFailingRoutine()
@@ -240,7 +275,12 @@ class TestErrorHandlerIsCritical:
         flow = Flow()
 
         class AlwaysFailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 raise ConnectionError("Always fails")
 
         # 非 critical routine，重试失败后 flow 继续（如果使用 CONTINUE）

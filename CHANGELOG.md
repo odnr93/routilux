@@ -5,6 +5,81 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2025-01-XX
+
+### Changed
+
+- **Unified Slot-Based Invocation**: Entry routines now must use a "trigger" slot instead of direct `__call__` invocation
+  - Entry routines must define a "trigger" slot: `self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)`
+  - `Flow.execute()` now triggers the entry routine via its "trigger" slot instead of calling `__call__` directly
+  - This provides a unified invocation mechanism across all routines (entry and non-entry)
+  - Direct `__call__` invocation is deprecated for entry routines (marked in documentation)
+
+### Added
+
+- **Slot.call_handler() method**: New method in `Slot` class for direct handler invocation with exception propagation control
+  - `call_handler(data, propagate_exceptions=False)`: Call handler with data, optionally propagating exceptions
+  - Used internally by Flow for entry routine trigger slots to allow proper error handling
+  - Supports all handler parameter matching patterns (kwargs, single param, multiple params)
+  - Includes data merging according to slot's merge_strategy
+
+### Improved
+
+- **Code Organization**: Eliminated ~70 lines of duplicate handler invocation code across Flow methods
+  - All handler invocation logic now centralized in `Slot.call_handler()` method
+  - Better separation of concerns: handler calling logic belongs to Slot class, not Flow class
+  - Improved maintainability: single source of truth for handler invocation
+
+- **Error Handling**: Entry routine exceptions now properly propagate to Flow's error handling strategies
+  - Entry routine trigger slots use `call_handler(propagate_exceptions=True)` to allow exception propagation
+  - Flow's error handling strategies (STOP, CONTINUE, RETRY, SKIP) now work correctly for entry routines
+  - Regular slot handlers continue to catch exceptions (maintains backward compatibility)
+
+- **Consistency**: All entry routine invocations now use the same mechanism
+  - `_execute_sequential()`: Uses `trigger_slot.call_handler()`
+  - Retry logic: Uses `trigger_slot.call_handler()`
+  - `resume()`: Uses `trigger_slot.call_handler()`
+
+### Fixed
+
+- **Error Handling in Entry Routines**: Fixed issue where entry routine exceptions were not properly handled by Flow's error handling strategies
+  - Previously, exceptions in entry routine handlers were caught by slot.receive() and logged, preventing error handling strategies from working
+  - Now exceptions properly propagate, allowing STOP, CONTINUE, RETRY, and SKIP strategies to function correctly
+
+### Documentation
+
+- Updated user guide to reflect unified slot-based invocation pattern
+- Added examples showing how to define trigger slots for entry routines
+- Updated API documentation for `Slot.call_handler()` method
+- Clarified differences between entry routine trigger slots and regular slots
+
+### Migration Guide
+
+**For Entry Routines:**
+
+Before (deprecated):
+```python
+class MyEntryRoutine(Routine):
+    def __call__(self, **kwargs):
+        # Entry logic here
+        self.emit("output", data="result")
+```
+
+After (required):
+```python
+class MyEntryRoutine(Routine):
+    def __init__(self):
+        super().__init__()
+        self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+        self.output_event = self.define_event("output", ["data"])
+    
+    def _handle_trigger(self, **kwargs):
+        # Entry logic here
+        self.emit("output", data="result")
+```
+
+**Note**: This is a breaking change for entry routines. All entry routines must be updated to use trigger slots.
+
 ## [0.8.1] - 2025-12-29
 
 ### Added

@@ -13,7 +13,12 @@ class TestErrorHandlerStrategies:
         flow = Flow()
 
         class FailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 raise ValueError("Test error")
 
         routine = FailingRoutine()
@@ -60,9 +65,11 @@ class TestErrorHandlerStrategies:
         class RetryRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 call_count[0] += 1
                 if call_count[0] < 2:
                     raise ValueError(f"Test error (attempt {call_count[0]})")
@@ -86,7 +93,12 @@ class TestErrorHandlerStrategies:
         call_count = [0]
 
         class AlwaysFailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 call_count[0] += 1
                 raise ValueError(f"Test error (attempt {call_count[0]})")
 
@@ -182,7 +194,12 @@ class TestErrorHandlerContext:
         flow = Flow()
 
         class FailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 raise ValueError("Test error")
 
         routine = FailingRoutine()

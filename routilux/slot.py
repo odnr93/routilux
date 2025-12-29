@@ -356,6 +356,87 @@ class Slot(Serializable):
             self._data = new_data.copy()
             return self._data
 
+    def call_handler(
+        self, data: Dict[str, Any], propagate_exceptions: bool = False
+    ) -> None:
+        """Call handler with data, optionally propagating exceptions.
+
+        This method is used for entry routine trigger slots where exceptions
+        need to propagate to Flow's error handling logic. It merges data
+        according to merge_strategy and calls the handler with appropriate
+        parameters.
+
+        Args:
+            data: Data dictionary to pass to handler. This will be merged
+                with existing slot data according to merge_strategy.
+            propagate_exceptions: If True, exceptions propagate to caller;
+                if False, they are caught and logged (default: False).
+                For entry routine trigger slots, set to True to allow
+                Flow's error handling strategies to work.
+
+        Raises:
+            Exception: If propagate_exceptions is True and handler raises
+                an exception, it will be re-raised.
+
+        Examples:
+            Entry routine trigger slot (exceptions propagate):
+                >>> trigger_slot.call_handler(entry_params, propagate_exceptions=True)
+
+            Normal slot handler (exceptions caught):
+                >>> slot.call_handler(data, propagate_exceptions=False)
+        """
+        # Merge new data with existing data according to merge_strategy
+        # This updates self._data and returns the merged result
+        merged_data = self._merge_data(data)
+
+        # Call handler with merged data if handler is defined
+        if self.handler is not None:
+            try:
+                import inspect
+
+                sig = inspect.signature(self.handler)
+                params = list(sig.parameters.keys())
+
+                # If handler accepts **kwargs, pass all data directly
+                if self._is_kwargs_handler(self.handler):
+                    self.handler(**merged_data)
+                elif len(params) == 1 and params[0] == "data":
+                    # Handler only accepts one 'data' parameter, pass entire dictionary
+                    self.handler(merged_data)
+                elif len(params) == 1:
+                    # Handler only accepts one parameter, try to pass matching value
+                    param_name = params[0]
+                    if param_name in merged_data:
+                        self.handler(merged_data[param_name])
+                    else:
+                        # If no matching parameter, pass entire dictionary
+                        self.handler(merged_data)
+                else:
+                    # Multiple parameters, try to match
+                    matched_params = {}
+                    for param_name in params:
+                        if param_name in merged_data:
+                            matched_params[param_name] = merged_data[param_name]
+
+                    if matched_params:
+                        self.handler(**matched_params)
+                    else:
+                        # If no match, pass entire dictionary as first parameter
+                        self.handler(merged_data)
+            except Exception as e:
+                if propagate_exceptions:
+                    # Re-raise exception for entry routine trigger slots
+                    # This allows Flow's error handling strategies to work
+                    raise
+                else:
+                    # Record exception but don't interrupt flow (normal slot behavior)
+                    import logging
+
+                    logging.exception(f"Error in slot {self} handler: {e}")
+                    self.routine._stats.setdefault("errors", []).append(
+                        {"slot": self.name, "error": str(e)}
+                    )
+
     @staticmethod
     def _is_kwargs_handler(handler: Callable) -> bool:
         """Check if handler accepts **kwargs.

@@ -1,6 +1,75 @@
 Changelog
 =========
 
+Version 0.9.0
+-------------
+
+Released: 2025-01-XX
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+* ⚠️ **Unified Slot-Based Invocation**: Entry routines must now use a "trigger" slot instead of direct ``__call__`` invocation
+  * All entry routines must define a "trigger" slot: ``self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)``
+  * ``Flow.execute()`` now triggers entry routines via their "trigger" slot
+  * Direct ``__call__`` invocation is deprecated for entry routines
+
+New Features
+~~~~~~~~~~~~
+
+* ✅ **Slot.call_handler() method**: New method for direct handler invocation with exception propagation control
+  * Supports all handler parameter matching patterns
+  * Includes data merging according to slot's merge_strategy
+  * Used internally by Flow for entry routine trigger slots
+
+Improvements
+~~~~~~~~~~~~
+
+* ✅ **Code Organization**: Eliminated ~70 lines of duplicate code by centralizing handler invocation logic in ``Slot.call_handler()``
+* ✅ **Error Handling**: Entry routine exceptions now properly propagate to Flow's error handling strategies
+* ✅ **Consistency**: All entry routine invocations use the same unified mechanism
+* ✅ **Maintainability**: Single source of truth for handler invocation logic
+
+Fixed
+~~~~~
+
+* ✅ **Error Handling in Entry Routines**: Fixed issue where entry routine exceptions were not properly handled by Flow's error handling strategies
+
+Documentation
+~~~~~~~~~~~~~
+
+* ✅ Updated user guide to reflect unified slot-based invocation pattern
+* ✅ Added examples showing how to define trigger slots for entry routines
+* ✅ Updated API documentation for ``Slot.call_handler()`` method
+
+Migration Guide
+~~~~~~~~~~~~~~~
+
+**For Entry Routines:**
+
+Before (deprecated):
+.. code-block:: python
+
+   class MyEntryRoutine(Routine):
+       def __call__(self, **kwargs):
+           # Entry logic here
+           self.emit("output", data="result")
+
+After (required):
+.. code-block:: python
+
+   class MyEntryRoutine(Routine):
+       def __init__(self):
+           super().__init__()
+           self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+           self.output_event = self.define_event("output", ["data"])
+       
+       def _handle_trigger(self, **kwargs):
+           # Entry logic here
+           self.emit("output", data="result")
+
+**Note**: This is a breaking change. All entry routines must be updated to use trigger slots.
+
 Version 0.1.2
 -------------
 

@@ -17,11 +17,14 @@ class DataSource(Routine):
 
     def __init__(self):
         super().__init__()
+        # Define trigger slot for entry routine
+        self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
         self.output_event = self.define_event("output", ["data"])
 
-    def __call__(self, data=None):
-        """Emit data through the output event"""
-        output_data = data or "default_data"
+    def _handle_trigger(self, data=None, **kwargs):
+        """Handle trigger and emit data through the output event"""
+        # Extract data from kwargs if not provided directly
+        output_data = data or kwargs.get("data", "default_data")
         self._stats["emitted_count"] = self._stats.get("emitted_count", 0) + 1
         self.emit("output", data=output_data)
 

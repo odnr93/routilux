@@ -42,9 +42,11 @@ class SourceRoutine(Routine):
         super().__init__()
         self.tracker = tracker
         self.routine_id = routine_id
+        # Define trigger slot for entry routine
+        self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
         self.output_event = self.define_event("output")
 
-    def __call__(self, **kwargs):
+    def _handle_trigger(self, **kwargs):
         self.tracker.record(self.routine_id, "start")
         self.emit("output", data="test_data")
         self.tracker.record(self.routine_id, "end")

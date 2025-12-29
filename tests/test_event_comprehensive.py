@@ -18,9 +18,11 @@ class TestEventConcurrentEmit:
         class SourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="test", flow=flow)
 
         class FailingRoutine(Routine):
@@ -60,9 +62,11 @@ class TestEventConcurrentEmit:
         class SourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 # 不提供 flow，应该使用顺序执行
                 self.emit("output", data="test")
 
@@ -128,9 +132,11 @@ class TestEventEdgeCases:
         class SourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="test", flow=flow)
 
         class TargetRoutine(Routine):

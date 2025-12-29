@@ -17,19 +17,21 @@ Understanding Error Handling in Routilux
 
 Errors can occur in different places in a Routilux workflow:
 
-1. **Routine Execution Errors**: Errors raised in a routine's ``__call__`` method
-   (entry point execution)
+1. **Entry Routine Execution Errors**: Errors raised in an entry routine's trigger
+   slot handler (when called by ``Flow.execute()``). These errors propagate to Flow's
+   error handling mechanisms and can trigger error handling strategies.
 
 2. **Slot Handler Errors**: Errors raised in slot handler functions when processing
-   received data
+   received data from upstream routines. These errors are always caught and logged
+   to the routine's ``_stats["errors"]`` list without interrupting the flow.
 
 3. **Event Emission Errors**: Errors during event emission (rare, usually indicates
    a configuration issue)
 
 **Key Point**: Error handling strategies (STOP, CONTINUE, RETRY, SKIP) only apply
-to **routine execution errors** (errors in ``__call__``). Slot handler errors are
-always caught and logged to the routine's ``_stats["errors"]`` list without
-interrupting the flow.
+to **entry routine execution errors** (errors in trigger slot handlers called by
+``Flow.execute()``). Regular slot handler errors are always caught and logged
+without interrupting the flow.
 
 Error Handling Strategies
 -------------------------
@@ -573,9 +575,11 @@ SKIP Strategy
        """Optional enhancement - use SKIP if it fails"""
        def __init__(self):
            super().__init__()
+           # Define trigger slot for entry routine
+           self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
            self.output_event = self.define_event("output", ["enhanced_data"])
        
-       def __call__(self):
+       def _handle_trigger(self, **kwargs):
            # Enhancement service unavailable - skip this step
            raise ValueError("Enhancement service down")
 
@@ -583,9 +587,11 @@ SKIP Strategy
        """Logging - use CONTINUE if it fails (we tried but logging failed)"""
        def __init__(self):
            super().__init__()
+           # Define trigger slot for entry routine
+           self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
            self.output_event = self.define_event("output", ["logged_data"])
        
-       def __call__(self):
+       def _handle_trigger(self, **kwargs):
            # We tried to log but it failed - continue anyway
            raise ValueError("Logging service error")
 
@@ -610,15 +616,18 @@ SKIP Strategy
 Slot Handler Errors
 -------------------
 
-**Important**: Errors in slot handlers are handled differently from routine
+**Important**: Errors in slot handlers are handled differently from entry routine
 execution errors.
 
 **Behavior**:
-    * Slot handler errors are **always caught** and logged
+    * Regular slot handler errors are **always caught** and logged
     * Errors are recorded in ``routine._stats["errors"]``
     * Flow execution **continues** (does not stop)
     * Error handling strategies (STOP, CONTINUE, RETRY, SKIP) **do not apply** to
-      slot handler errors
+      regular slot handler errors
+    
+    * **Exception**: Entry routine trigger slot handlers use ``call_handler(propagate_exceptions=True)``,
+      so their errors **do propagate** and trigger Flow's error handling strategies
 
 **Why This Design?**:
 * Slot handlers process data from events, which may arrive asynchronously

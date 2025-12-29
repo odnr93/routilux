@@ -23,9 +23,11 @@ class TestFlowCancel:
         class LongRunningRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 # 模拟长时间运行
                 self.emit("output", data="running")
 
@@ -61,7 +63,12 @@ class TestFlowErrorHandler:
         flow = Flow()
 
         class FailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 raise ValueError("Test error")
 
         routine = FailingRoutine()
@@ -81,9 +88,11 @@ class TestFlowErrorHandler:
         class FailingRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 raise ValueError("Test error")
 
         class SuccessRoutine(Routine):
@@ -159,10 +168,12 @@ class TestFlowPauseResume:
         class TestRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
                 self.call_count = 0
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.call_count += 1
                 self.emit("output", data=f"call_{self.call_count}")
 
@@ -243,7 +254,16 @@ class TestFlowSerializationEdgeCases:
         """测试序列化带 job_state 的 Flow"""
         flow = Flow(flow_id="test_flow")
 
-        routine = Routine()
+        class TestRoutine(Routine):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
+                pass
+        
+        routine = TestRoutine()
         routine_id = flow.add_routine(routine, "test")
 
         # 执行以创建 job_state
@@ -334,10 +354,12 @@ class TestFlowComplexScenarios:
         class ParentRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
                 self.child_routine = Routine()
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="parent")
 
         parent = ParentRoutine()

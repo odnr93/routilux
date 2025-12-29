@@ -23,13 +23,6 @@ class SearchTask(Routine):
         # Define output event
         self.output_event = self.define_event("result", ["query", "results", "task_name"])
 
-    def __call__(self, **kwargs):
-        """Execute the routine."""
-        super().__call__(**kwargs)
-        # If called directly, trigger the search
-        query = kwargs.get("query", "default")
-        self._handle_trigger(query=query)
-
     def _handle_trigger(self, query: str = None, **kwargs):
         """Handle search trigger."""
         query = query or kwargs.get("query", "default")

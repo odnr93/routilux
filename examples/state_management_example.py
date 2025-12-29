@@ -16,10 +16,18 @@ from routilux import Flow, Routine
 class ProcessingRoutine(Routine):
     """A routine that processes data"""
 
-    def __init__(self):
+    def __init__(self, is_entry: bool = False):
         super().__init__()
+        # Entry routine needs trigger slot
+        if is_entry:
+            self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
         self.input_slot = self.define_slot("input", handler=self.process)
         self.output_event = self.define_event("output", ["result"])
+
+    def _handle_trigger(self, data=None, **kwargs):
+        """Handle trigger for entry routine"""
+        data = data or kwargs.get("data", "default")
+        self.process(data)
 
     def process(self, data):
         """Process the data"""
@@ -39,7 +47,8 @@ def main():
     flow = Flow(flow_id="state_management_example")
 
     # Create routine instances
-    processor1 = ProcessingRoutine()
+    # processor1 is the entry routine, so it needs trigger slot
+    processor1 = ProcessingRoutine(is_entry=True)
     processor2 = ProcessingRoutine()
 
     # Add routines to the flow

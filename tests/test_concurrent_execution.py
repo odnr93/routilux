@@ -78,9 +78,11 @@ class TestConcurrentRoutineExecution:
         class SourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.outputevent = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 time.sleep(0.1)  # 模拟处理时间
                 self.emit("output", data="test_data", flow=flow)
 
@@ -160,11 +162,13 @@ class TestConcurrentRoutineExecution:
         class MultiEventRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.event1 = self.define_event("event1", ["data"])
                 self.event2 = self.define_event("event2", ["data"])
                 self.event3 = self.define_event("event3", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 # 同时触发多个事件
                 self.emit("event1", data="data1", flow=flow)
                 self.emit("event2", data="data2", flow=flow)
@@ -220,9 +224,11 @@ class TestConcurrentRoutineExecution:
             class SourceRoutine(Routine):
                 def __init__(self):
                     super().__init__()
+                    # Define trigger slot for entry routine
+                    self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                     self.outputevent = self.define_event("output", ["data"])
 
-                def __call__(self):
+                def _handle_trigger(self, **kwargs):
                     self.emit("output", data="test", flow=flow)
 
             class SlowRoutine(Routine):
@@ -381,9 +387,11 @@ class TestConcurrentThreadSafety:
         class SourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.outputevent = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 # 触发多个并发执行
                 for i in range(20):
                     self.emit("output", data=i, flow=flow)
@@ -415,9 +423,11 @@ class TestConcurrentThreadSafety:
         class SourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.outputevent = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 for i in range(10):
                     self.emit("output", data=i, flow=flow)
 
@@ -464,9 +474,11 @@ class TestConcurrentErrorHandling:
         class SourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.outputevent = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 for i in range(5):
                     self.emit("output", data=i, flow=flow)
 
@@ -513,9 +525,11 @@ class TestConcurrentErrorHandling:
         class SourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.outputevent = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 for i in range(5):
                     self.emit("output", data=i, flow=flow)
 
@@ -577,7 +591,7 @@ class TestConcurrentSerialization:
     def test_deserialize_concurrent_flow(self):
         """测试反序列化并发 Flow"""
         from serilux import register_serializable
-
+        
         flow = Flow(execution_strategy="concurrent", max_workers=6)
 
         @register_serializable
@@ -605,7 +619,7 @@ class TestConcurrentSerialization:
     def test_serialize_deserialize_preserves_concurrency(self):
         """测试序列化/反序列化后并发功能仍然可用"""
         from serilux import register_serializable
-
+        
         flow = Flow(execution_strategy="concurrent", max_workers=5)
         execution_order = []
         execution_lock = threading.Lock()
@@ -614,9 +628,11 @@ class TestConcurrentSerialization:
         class SourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.outputevent = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="test", flow=flow)
 
         @register_serializable
@@ -672,7 +688,12 @@ class TestConcurrentEdgeCases:
         flow = Flow(execution_strategy="concurrent")
 
         class SimpleRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 pass
 
         routine = SimpleRoutine()
@@ -689,9 +710,11 @@ class TestConcurrentEdgeCases:
         class SourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.outputevent = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="test", flow=flow)
 
         class TargetRoutine(Routine):
@@ -729,9 +752,11 @@ class TestConcurrentEdgeCases:
         class SourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.outputevent = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 for i in range(3):
                     self.emit("output", data=i, flow=flow)
 
@@ -768,9 +793,11 @@ class TestConcurrentEdgeCases:
         class SourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.outputevent = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="test", flow=flow)
 
         class TargetRoutine(Routine):
@@ -806,10 +833,13 @@ class TestConcurrentIntegration:
         class ParserRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.outputevent = self.define_event("parsed", ["tasks"])
 
-            def __call__(self, tasks):
+            def _handle_trigger(self, tasks=None, **kwargs):
                 # 解析任务
+                tasks = tasks or kwargs.get("tasks", [])
                 parsed_tasks = [f"task_{i}" for i in tasks]
                 self.emit("parsed", tasks=parsed_tasks, flow=flow)
 

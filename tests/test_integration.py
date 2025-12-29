@@ -16,10 +16,13 @@ class TestCompleteFlow:
         class InputProcessor(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self, input_data=None):
-                processed = f"Processed: {input_data or 'default'}"
+            def _handle_trigger(self, input_data=None, **kwargs):
+                input_data = input_data or kwargs.get("input_data", "default")
+                processed = f"Processed: {input_data}"
                 self._stats["input_processed"] = True
                 self.emit("output", data=processed)
 
@@ -89,10 +92,13 @@ class TestCompleteFlow:
         class Processor(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
                 self.error_event = self.define_event("error", ["error"])
 
-            def __call__(self, should_fail=False):
+            def _handle_trigger(self, should_fail=False, **kwargs):
+                should_fail = should_fail or kwargs.get("should_fail", False)
                 if should_fail:
                     self.emit("error", error="Test error")
                 else:
@@ -144,25 +150,31 @@ class TestCompleteFlow:
         class SourceA(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="A")
 
         class SourceB(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="B")
 
         class SourceC(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="C")
 
         class Aggregator(Routine):
@@ -208,9 +220,11 @@ class TestComplexScenarios:
         class RoutineA(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="A")
 
         class RoutineB(Routine):

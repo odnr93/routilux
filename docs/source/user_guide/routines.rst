@@ -132,13 +132,29 @@ This method handles various input patterns:
 Executing Routines
 ------------------
 
-Routines are executed by calling them:
+Routines are executed through slot handlers, not by direct calling. Entry routines
+must define a "trigger" slot that will be called by Flow.execute().
+
+**Entry Routine Pattern:**
+
+All routines that will be used as entry points in a Flow must define a "trigger" slot:
 
 .. code-block:: python
 
-   routine(data="test")
+   class MyEntryRoutine(Routine):
+       def __init__(self):
+           super().__init__()
+           # Define trigger slot for entry routine
+           self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+           self.output_event = self.define_event("output", ["result"])
+       
+       def _handle_trigger(self, **kwargs):
+           # Execution logic here
+           data = kwargs.get("data", "default")
+           self.emit("output", result=f"Processed: {data}")
 
-Or through a Flow's execute method (see :doc:`flows`).
+The Flow.execute() method will automatically call the "trigger" slot with the provided
+entry_params. See :doc:`flows` for more details on executing flows.
 
 Multiple Slots Behavior
 ------------------------

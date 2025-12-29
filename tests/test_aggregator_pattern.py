@@ -12,10 +12,11 @@ class SourceRoutine(Routine):
     def __init__(self, source_id: str):
         super().__init__()
         self.source_id = source_id
+        # Define trigger slot for entry routine
+        self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
         self.output_event = self.define_event("output", ["data", "source_id"])
 
-    def __call__(self, **kwargs):
-        super().__call__(**kwargs)
+    def _handle_trigger(self, **kwargs):
         data = kwargs.get("data", f"data_from_{self.source_id}")
         self.emit("output", data=data, source_id=self.source_id)
 

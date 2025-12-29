@@ -15,11 +15,13 @@ class InputReader(Routine):
 
     def __init__(self):
         super().__init__()
+        # Define trigger slot for entry routine
+        self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
         self.output_event = self.define_event("output", ["raw_data"])
 
-    def __call__(self, filename=None):
-        """Simulate reading from a file"""
-        raw_data = filename or "sample_data.txt"
+    def _handle_trigger(self, filename=None, **kwargs):
+        """Handle trigger and simulate reading from a file"""
+        raw_data = filename or kwargs.get("filename", "sample_data.txt")
         self._stats["files_read"] = self._stats.get("files_read", 0) + 1
         self.emit("output", raw_data=raw_data)
 

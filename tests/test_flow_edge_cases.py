@@ -109,9 +109,11 @@ class TestFlowExecuteEdgeCases:
         class TestRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 # 尝试 emit 但没有 flow 上下文
                 self.emit("output", data="test")
 
@@ -127,7 +129,12 @@ class TestFlowExecuteEdgeCases:
         flow = Flow()
 
         class FailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 raise ValueError("Resume error")
 
         routine = FailingRoutine()

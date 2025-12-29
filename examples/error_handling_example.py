@@ -15,10 +15,12 @@ class UnreliableRoutine(Routine):
 
     def __init__(self):
         super().__init__()
+        # Define trigger slot for entry routine
+        self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
         self.output_event = self.define_event("output", ["data"])
         self.call_count = 0
 
-    def __call__(self):
+    def _handle_trigger(self, **kwargs):
         """May fail on first few calls"""
         self.call_count += 1
         if self.call_count < 3:
@@ -81,7 +83,12 @@ def test_continue_strategy():
     flow = Flow(flow_id="continue_test")
 
     class FailingRoutine(Routine):
-        def __call__(self):
+        def __init__(self):
+            super().__init__()
+            # Define trigger slot for entry routine
+            self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+        
+        def _handle_trigger(self, **kwargs):
             raise ValueError("This will be logged but execution continues")
 
     failing = FailingRoutine()
@@ -111,9 +118,11 @@ def test_skip_strategy():
     class FailingRoutine(Routine):
         def __init__(self):
             super().__init__()
+            # Define trigger slot for entry routine
+            self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
             self.output_event = self.define_event("output", ["data"])
 
-        def __call__(self):
+        def _handle_trigger(self, **kwargs):
             raise ValueError("This routine will be skipped")
 
     failing = FailingRoutine()

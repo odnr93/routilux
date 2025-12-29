@@ -14,7 +14,12 @@ class TestRetryableExceptions:
         call_count = [0]
 
         class FailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 call_count[0] += 1
                 if call_count[0] == 1:
                     # First call raises retryable exception
@@ -47,7 +52,12 @@ class TestRetryableExceptions:
         call_count = [0]
 
         class FailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 call_count[0] += 1
                 if call_count[0] < 3:
                     raise ValueError("Error")
@@ -72,7 +82,12 @@ class TestRetryableExceptions:
         call_count = [0]
 
         class FailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 call_count[0] += 1
                 raise ValueError("Non-retryable")
 

@@ -168,10 +168,13 @@ class TriggerRoutine(Routine):
 
     def __init__(self):
         super().__init__()
+        # Define trigger slot for entry routine
+        self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
         self.output_event = self.define_event("trigger_fetch", ["task_id"])
 
-    def __call__(self, task_id: str = "default_task"):
-        """Trigger the concurrent fetching"""
+    def _handle_trigger(self, task_id: str = None, **kwargs):
+        """Handle trigger and start concurrent fetching"""
+        task_id = task_id or kwargs.get("task_id", "default_task")
         self.emit("trigger_fetch", task_id=task_id, flow=self._current_flow)
 
 

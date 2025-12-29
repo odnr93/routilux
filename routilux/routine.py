@@ -565,10 +565,15 @@ class Routine(Serializable):
             self._stats[history_key] = history
 
     def __call__(self, **kwargs) -> None:
-        """Execute routine.
+        """Execute routine (deprecated - use slot handlers instead).
 
-        Subclasses should override this method to implement specific execution logic.
-        The base implementation automatically tracks execution statistics.
+        .. deprecated:: 
+            Direct calling of routines is deprecated. Routines should be executed
+            through slot handlers. Entry routines should define a "trigger" slot
+            that will be called by Flow.execute().
+
+        This method is kept for backward compatibility but should not be used
+        in new code. Instead, define slot handlers that contain your execution logic.
 
         Args:
             ``**kwargs``: Parameters passed to the routine.
@@ -577,16 +582,27 @@ class Routine(Serializable):
             The base implementation automatically updates statistics:
             - Sets "called" to True
             - Increments "call_count" by 1
-            Subclasses can track additional statistics using set_stat() or
-            increment_stat() methods.
+            
+            However, in the new architecture, routines should be triggered through
+            slots, and statistics should be tracked in slot handlers.
 
         Examples:
+            Old way (deprecated):
             >>> class MyRoutine(Routine):
             ...     def __call__(self, **kwargs):
-            ...         super().__call__(**kwargs)  # Track base statistics
-            ...         # Track custom statistics
+            ...         # This is deprecated
+            ...         pass
+
+            New way (recommended):
+            >>> class MyRoutine(Routine):
+            ...     def __init__(self):
+            ...         super().__init__()
+            ...         # Define trigger slot for entry routine
+            ...         self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            ...     
+            ...     def _handle_trigger(self, **kwargs):
+            ...         # Execution logic here
             ...         self.increment_stat("custom_operations")
-            ...         # Your custom logic here
         """
         # Track execution statistics
         # Mark routine as having been called at least once
@@ -598,8 +614,8 @@ class Routine(Serializable):
             self._stats["call_count"] = 0
         self._stats["call_count"] += 1
 
-        # Subclasses should override this method to implement specific execution logic
-        # They can call super().__call__(**kwargs) to maintain base statistics tracking
+        # Note: In the new architecture, routines should be executed through slot handlers
+        # This method is kept for compatibility but should not be overridden in new code
         pass
 
     def get_slot(self, name: str) -> Optional["Slot"]:

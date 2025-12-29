@@ -105,10 +105,13 @@ class TestFlowExecution:
         class RoutineA(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self, data=None):
-                self.emit("output", data=data or "A")
+            def _handle_trigger(self, data=None, **kwargs):
+                data = data or kwargs.get("data", "A")
+                self.emit("output", data=data)
 
         class RoutineB(Routine):
             def __init__(self):
@@ -157,10 +160,13 @@ class TestFlowExecution:
         class RoutineA(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self, data=None):
-                self.emit("output", data=data or "A")
+            def _handle_trigger(self, data=None, **kwargs):
+                data = data or kwargs.get("data", "A")
+                self.emit("output", data=data)
 
         class RoutineB(Routine):
             def __init__(self):
@@ -206,17 +212,21 @@ class TestFlowExecution:
         class RoutineA(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="A")
 
         class RoutineB(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.output_event = self.define_event("output", ["data"])
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.emit("output", data="B")
 
         class RoutineC(Routine):
@@ -263,9 +273,11 @@ class TestFlowExecution:
         class SimpleRoutine(Routine):
             def __init__(self):
                 super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
                 self.called = False
 
-            def __call__(self):
+            def _handle_trigger(self, **kwargs):
                 self.called = True
 
         routine = SimpleRoutine()
@@ -295,7 +307,12 @@ class TestFlowErrorHandling:
         flow = Flow()
 
         class FailingRoutine(Routine):
-            def __call__(self):
+            def __init__(self):
+                super().__init__()
+                # Define trigger slot for entry routine
+                self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
+            
+            def _handle_trigger(self, **kwargs):
                 raise ValueError("Test error")
 
         routine = FailingRoutine()
