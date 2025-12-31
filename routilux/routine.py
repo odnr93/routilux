@@ -5,15 +5,33 @@ Improved Routine mechanism supporting slots (input slots) and events (output eve
 """
 
 from __future__ import annotations
-from typing import Dict, Any, Callable, Optional, List, TYPE_CHECKING
+from typing import Dict, Any, Callable, Optional, List, TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
     from routilux.slot import Slot
     from routilux.event import Event
     from routilux.flow import Flow
     from routilux.error_handler import ErrorHandler, ErrorStrategy
+    from routilux.job_state import JobState
 
 from serilux import register_serializable, Serializable
+
+
+class ExecutionContext(NamedTuple):
+    """Execution context containing flow, job_state, and routine_id.
+
+    This is returned by Routine.get_execution_context() to provide convenient
+    access to execution-related handles during routine execution.
+
+    Attributes:
+        flow: The Flow object managing this execution.
+        job_state: The JobState object tracking this execution's state.
+        routine_id: The string ID of this routine in the flow.
+    """
+
+    flow: "Flow"
+    job_state: "JobState"
+    routine_id: str
 
 
 @register_serializable
@@ -23,23 +41,7 @@ class Routine(Serializable):
     Features:
     - Support for slots (input slots)
     - Support for events (output events)
-    - Statistics dictionary (_stats) for tracking execution metrics
     - Configuration dictionary (_config) for storing routine-specific settings
-
-    Statistics Management (_stats):
-        The _stats dictionary is used to track runtime statistics and execution
-        metrics. It is automatically serialized/deserialized and can be accessed
-        via stats(), get_stat(), set_stat(), and increment_stat() methods.
-
-        Common statistics tracked automatically:
-        - "called": Boolean indicating if routine has been called
-        - "call_count": Number of times routine has been executed
-        - "emitted_events": List of events emitted with their data
-
-        Subclasses can track custom statistics:
-        - Processing counts, error counts, timing information, etc.
-        - Use set_stat() or increment_stat() for type-safe updates
-        - Direct access via self._stats is also supported
 
     Configuration Management (_config):
         The _config dictionary stores routine-specific configuration that should
@@ -50,32 +52,60 @@ class Routine(Serializable):
         - Routines MUST NOT accept constructor parameters (except self).
           This is required for proper serialization/deserialization.
         - All configuration should be stored in the _config dictionary.
-        - All statistics should be stored in the _stats dictionary.
-        - Both _config and _stats are automatically included in serialization.
+        - _config is automatically included in serialization.
+        - **During execution, routines MUST NOT modify any instance variables.**
+        - **All execution-related state should be stored in JobState.**
+        - Routines can only READ from _config during execution.
+        - Routines can WRITE to JobState (via job_state.update_routine_state(), etc.).
+
+    Execution State Management:
+        During execution, routines should:
+        - Read configuration from _config (via get_config())
+        - Write execution state to JobState (via job_state.update_routine_state())
+        - Store shared data in JobState.shared_data
+        - Append logs to JobState.shared_log
+        - Send outputs via Routine.send_output() (which uses JobState.send_output())
+
+    Why This Constraint?
+        The same routine object can be used by multiple concurrent executions.
+        Modifying instance variables during execution would cause data corruption
+        and break execution isolation. All execution-specific state must be stored
+        in JobState, which is unique per execution.
 
     Examples:
-        Correct usage with configuration and statistics:
+        Correct usage with configuration:
             >>> class MyRoutine(Routine):
             ...     def __init__(self):
             ...         super().__init__()
             ...         # Set configuration
             ...         self.set_config(name="my_routine", timeout=30)
-            ...         # Initialize statistics
-            ...         self.set_stat("processed_count", 0)
-            ...         self.set_stat("error_count", 0)
             ...
-            ...     def __call__(self, **kwargs):
-            ...         super().__call__(**kwargs)
-            ...         # Track custom statistics
-            ...         self.increment_stat("processed_count")
+            ...     def process(self, **kwargs):
             ...         # Use configuration
             ...         timeout = self.get_config("timeout", default=10)
+            ...         # Store execution state in JobState
+            ...         flow = getattr(self, "_current_flow", None)
+            ...         if flow:
+            ...             job_state = getattr(flow._current_execution_job_state, "value", None)
+            ...             if job_state:
+            ...                 routine_id = flow._get_routine_id(self)
+            ...                 job_state.update_routine_state(routine_id, {"processed": True})
 
         Incorrect usage (will break serialization):
             >>> class BadRoutine(Routine):
             ...     def __init__(self, name: str):  # ❌ Don't do this!
             ...         super().__init__()
             ...         self.name = name  # Use _config instead!
+
+        Incorrect usage (will break execution isolation):
+            >>> class BadRoutine(Routine):
+            ...     def process(self, **kwargs):
+            ...         self.counter += 1  # ❌ Don't modify instance variables!
+            ...         self.data.append(kwargs)  # ❌ Don't modify instance variables!
+            ...         # Use JobState instead:
+            ...         job_state = getattr(flow._current_execution_job_state, 'value', None)
+            ...         if job_state:
+            ...             job_state.update_routine_state(routine_id, {'counter': counter + 1})
     """
 
     def __init__(self):
@@ -91,17 +121,6 @@ class Routine(Serializable):
         self._slots: Dict[str, "Slot"] = {}
         self._events: Dict[str, "Event"] = {}
 
-        # Statistics dictionary for tracking execution metrics and runtime statistics
-        # Automatically tracked statistics:
-        #   - "called": Boolean, set to True when routine is executed
-        #   - "call_count": Integer, incremented each time routine is called
-        #   - "emitted_events": List of dicts, records each event emission with data
-        # Subclasses can add custom statistics like:
-        #   - Processing counts, error counts, timing information, etc.
-        # Use set_stat(), get_stat(), increment_stat() methods for type-safe access
-        # Direct access via self._stats[key] is also supported
-        self._stats: Dict[str, Any] = {}
-
         # Configuration dictionary for storing routine-specific settings
         # All configuration values are automatically serialized/deserialized
         # Use set_config() and get_config() methods for convenient access
@@ -116,7 +135,7 @@ class Routine(Serializable):
         # _slots and _events are included - base class will automatically serialize/deserialize them
         # We only need to restore routine references after deserialization
         self.add_serializable_fields(
-            ["_id", "_stats", "_config", "_error_handler", "_slots", "_events"]
+            ["_id", "_config", "_error_handler", "_slots", "_events"]
         )
 
     def __repr__(self) -> str:
@@ -324,34 +343,15 @@ class Routine(Serializable):
 
         event.emit(flow=flow, **kwargs)
 
-        # Track event emission in statistics
-        # This records each event emission for monitoring and debugging purposes
-        # The emitted_events list contains dictionaries with event name and data
-        # This is useful for:
-        #   - Debugging event flow
-        #   - Monitoring routine behavior
-        #   - Analyzing execution patterns
-        if "emitted_events" not in self._stats:
-            self._stats["emitted_events"] = []
-        self._stats["emitted_events"].append({"event": event_name, "data": kwargs})
-
         # If flow exists, record execution history
         # Note: JobState is passed through tasks, so we can't access it directly here
         # Execution history is recorded when tasks are created in event.emit()
         # This is handled in the event emission logic
         if flow is not None:
-            # Try to get JobState from thread-local storage (for direct calls)
-            # For queue-based execution, JobState is passed through tasks
-            job_state = getattr(flow._current_execution_job_state, "value", None)
-            if job_state is not None:
-                # Find routine_id in flow (not self._id which is memory address)
-                routine_id = None
-                for rid, routine in flow.routines.items():
-                    if routine is self:
-                        routine_id = rid
-                        break
-                if routine_id:
-                    job_state.record_execution(routine_id, event_name, kwargs)
+            # Use get_execution_context() for convenient access
+            ctx = self.get_execution_context()
+            if ctx is not None:
+                ctx.job_state.record_execution(ctx.routine_id, event_name, kwargs)
 
             # Record to execution tracker
             if flow.execution_tracker is not None:
@@ -363,125 +363,6 @@ class Routine(Serializable):
                     target_routine_id = event_obj.connected_slots[0].routine._id
 
                 flow.execution_tracker.record_event(self._id, event_name, target_routine_id, kwargs)
-
-    def stats(self) -> Dict[str, Any]:
-        """Return a copy of the statistics dictionary.
-
-        This method returns a snapshot of all statistics tracked by this routine.
-        The returned dictionary is a copy, so modifications won't affect the
-        original _stats dictionary.
-
-        Returns:
-            Copy of the _stats dictionary containing all tracked statistics.
-            Common keys include:
-            - "called": Boolean indicating if routine has been executed
-            - "call_count": Number of times routine has been called
-            - "emitted_events": List of event emission records
-            - Custom statistics added by subclasses
-
-        Examples:
-            >>> routine = MyRoutine()
-            >>> routine()  # Execute routine
-            >>> stats = routine.stats()
-            >>> print(stats["call_count"])  # 1
-            >>> print(stats["called"])  # True
-            >>> print(len(stats.get("emitted_events", [])))  # Number of events emitted
-        """
-        return self._stats.copy()
-
-    def set_stat(self, key: str, value: Any) -> None:
-        """Set a statistics value in the _stats dictionary.
-
-        This is the recommended way to set or update statistics. All statistics
-        are automatically serialized/deserialized.
-
-        Args:
-            key: Statistics key name.
-            value: Statistics value to set. Can be any serializable type.
-
-        Examples:
-            >>> routine = MyRoutine()
-            >>> routine.set_stat("processed_count", 0)
-            >>> routine.set_stat("last_processed_time", time.time())
-            >>> routine.set_stat("status", "active")
-
-            >>> # You can also set stats directly:
-            >>> routine._stats["custom_metric"] = 42
-        """
-        self._stats[key] = value
-
-    def get_stat(self, key: str, default: Any = None) -> Any:
-        """Get a statistics value from the _stats dictionary.
-
-        Args:
-            key: Statistics key to retrieve.
-            default: Default value to return if key doesn't exist.
-
-        Returns:
-            Statistics value if found, default value otherwise.
-
-        Examples:
-            >>> routine = MyRoutine()
-            >>> routine.set_stat("processed_count", 10)
-            >>> count = routine.get_stat("processed_count", default=0)  # Returns 10
-            >>> errors = routine.get_stat("error_count", default=0)  # Returns 0
-        """
-        return self._stats.get(key, default)
-
-    def increment_stat(self, key: str, amount: int = 1) -> int:
-        """Increment a numeric statistics value.
-
-        This is a convenience method for incrementing counters. If the key
-        doesn't exist, it's initialized to 0 before incrementing.
-
-        Args:
-            key: Statistics key to increment.
-            amount: Amount to increment by (default: 1).
-
-        Returns:
-            The new value after incrementing.
-
-        Examples:
-            >>> routine = MyRoutine()
-            >>> routine.increment_stat("processed_count")  # Returns 1
-            >>> routine.increment_stat("processed_count")  # Returns 2
-            >>> routine.increment_stat("processed_count", amount=5)  # Returns 7
-            >>> routine.get_stat("processed_count")  # 7
-        """
-        if key not in self._stats:
-            self._stats[key] = 0
-        self._stats[key] += amount
-        return self._stats[key]
-
-    def reset_stats(self, keys: Optional[List[str]] = None) -> None:
-        """Reset statistics values.
-
-        Args:
-            keys: List of statistic keys to reset. If None, resets all statistics
-                except "emitted_events" (which is typically preserved for history).
-                If empty list, no statistics are reset.
-
-        Examples:
-            >>> routine = MyRoutine()
-            >>> routine.set_stat("count", 10)
-            >>> routine.set_stat("errors", 5)
-            >>> routine.reset_stats(["count"])  # Reset only "count"
-            >>> routine.get_stat("count")  # None or default
-            >>> routine.get_stat("errors")  # Still 5
-
-            >>> routine.reset_stats()  # Reset all except "emitted_events"
-        """
-        if keys is None:
-            # Reset all statistics except emitted_events (preserve history)
-            emitted_events = self._stats.get("emitted_events", [])
-            self._stats.clear()
-            if emitted_events:
-                self._stats["emitted_events"] = emitted_events
-        else:
-            # Reset only specified keys
-            for key in keys:
-                if key in self._stats:
-                    del self._stats[key]
 
     def _extract_input_data(self, data: Any = None, **kwargs) -> Any:
         """Extract input data from slot parameters.
@@ -541,42 +422,6 @@ class Routine(Serializable):
 
         return {}
 
-    def _track_operation(self, operation_name: str, success: bool = True, **metadata) -> None:
-        """Track operation statistics with metadata.
-
-        This method provides a consistent way to track operations across routines,
-        automatically maintaining success/failure counts and operation history.
-
-        Args:
-            operation_name: Name of the operation (e.g., "processing", "validation").
-            success: Whether operation succeeded (default: True).
-            **metadata: Additional metadata to store in operation history.
-
-        Examples:
-            >>> # Track successful operation
-            >>> self._track_operation("processing", success=True, items_processed=10)
-
-            >>> # Track failed operation with error info
-            >>> self._track_operation("validation", success=False, error="Invalid format")
-
-            >>> # Access statistics
-            >>> stats = self.stats()
-            >>> print(stats["total_processing"])  # Total operations
-            >>> print(stats["successful_processing"])  # Successful operations
-            >>> print(stats["processing_history"])  # Operation history with metadata
-        """
-        self.increment_stat(f"total_{operation_name}")
-        if success:
-            self.increment_stat(f"successful_{operation_name}")
-        else:
-            self.increment_stat(f"failed_{operation_name}")
-
-        if metadata:
-            history_key = f"{operation_name}_history"
-            history = self._stats.get(history_key, [])
-            history.append(metadata)
-            self._stats[history_key] = history
-
     def __call__(self, **kwargs) -> None:
         r"""Execute routine (deprecated - use slot handlers instead).
 
@@ -592,12 +437,8 @@ class Routine(Serializable):
             ``**kwargs``: Parameters passed to the routine.
 
         Note:
-            The base implementation automatically updates statistics:
-            - Sets "called" to True
-            - Increments "call_count" by 1
-
-            However, in the new architecture, routines should be triggered through
-            slots, and statistics should be tracked in slot handlers.
+            In the new architecture, routines should be triggered through
+            slots, and execution state should be tracked in JobState.
 
         Examples:
             Old way (deprecated):
@@ -615,20 +456,11 @@ class Routine(Serializable):
             ...
             ...     def _handle_trigger(self, \*\*kwargs):
             ...         # Execution logic here
-            ...         self.increment_stat("custom_operations")
+            ...         # Store execution state in JobState if needed
         """
-        # Track execution statistics
-        # Mark routine as having been called at least once
-        self._stats["called"] = True
-
-        # Increment call counter to track how many times routine has been executed
-        # This is useful for monitoring routine usage and performance analysis
-        if "call_count" not in self._stats:
-            self._stats["call_count"] = 0
-        self._stats["call_count"] += 1
-
         # Note: In the new architecture, routines should be executed through slot handlers
         # This method is kept for compatibility but should not be overridden in new code
+        # Execution state should be tracked in JobState, not routine._stats
         pass
 
     def get_slot(self, name: str) -> Optional["Slot"]:
@@ -789,6 +621,151 @@ class Routine(Serializable):
                 is_critical=True,
             )
         )
+
+    def get_execution_context(self) -> Optional[ExecutionContext]:
+        """Get execution context (flow, job_state, routine_id).
+
+        This method provides convenient access to execution-related handles
+        during routine execution. It automatically retrieves the flow from
+        routine context, job_state from thread-local storage, and routine_id
+        from the flow's routine mapping.
+
+        Returns:
+            ExecutionContext object containing (flow, job_state, routine_id)
+            if in execution context, None otherwise.
+
+        Examples:
+            Basic usage:
+                >>> ctx = self.get_execution_context()
+                >>> if ctx:
+                ...     # Access flow, job_state, and routine_id
+                ...     ctx.flow
+                ...     ctx.job_state
+                ...     ctx.routine_id
+                ...     # Update routine state
+                ...     ctx.job_state.update_routine_state(ctx.routine_id, {"processed": True})
+
+            Unpacking:
+                >>> ctx = self.get_execution_context()
+                >>> if ctx:
+                ...     flow, job_state, routine_id = ctx
+                ...     job_state.update_routine_state(routine_id, {"count": 1})
+
+        Note:
+            This method only works when the routine is executing within a Flow
+            context. For standalone usage or testing, it will return None.
+        """
+        # Get flow from routine context
+        flow = getattr(self, "_current_flow", None)
+        if flow is None:
+            return None
+
+        # Get job_state from thread-local storage
+        job_state = getattr(flow._current_execution_job_state, "value", None)
+        if job_state is None:
+            return None
+
+        # Get routine_id from flow
+        routine_id = flow._get_routine_id(self)
+        if routine_id is None:
+            return None
+
+        return ExecutionContext(flow, job_state, routine_id)
+
+    def emit_deferred_event(self, event_name: str, **kwargs) -> None:
+        """Emit a deferred event that will be processed when the flow is resumed.
+
+        This method is similar to emit(), but instead of immediately emitting
+        the event, it stores the event information in JobState.deferred_events.
+        When the flow is resumed (via flow.resume()), these deferred events
+        will be automatically emitted.
+
+        This is useful for scenarios where you want to pause the execution
+        and emit events after resuming, such as in LLM agent workflows where
+        you need to wait for user input.
+
+        Args:
+            event_name: Name of the event to emit (must be defined via define_event()).
+            **kwargs: Data to pass to the event.
+
+        Raises:
+            RuntimeError: If not in execution context (no flow/job_state available).
+
+        Examples:
+            Basic usage:
+                >>> class MyRoutine(Routine):
+                ...     def process(self, **kwargs):
+                ...         # Emit a deferred event
+                ...         self.emit_deferred_event("user_input_required", question="What is your name?")
+                ...         # Pause the execution
+                ...         ctx = self.get_execution_context()
+                ...         if ctx:
+                ...             ctx.flow.pause(ctx.job_state, reason="Waiting for user input")
+
+            After resume:
+                >>> # When flow.resume() is called, deferred events are automatically emitted
+                >>> flow.resume(job_state)
+                >>> # The "user_input_required" event will be emitted automatically
+
+        Note:
+            - The event must be defined using define_event() before calling this method.
+            - Deferred events are stored in JobState and are serialized/deserialized
+              along with the JobState.
+            - Deferred events are emitted in the order they were added.
+        """
+        ctx = self.get_execution_context()
+        if ctx is None:
+            raise RuntimeError(
+                "Cannot emit deferred event: not in execution context. "
+                "This method can only be called during flow execution."
+            )
+
+        ctx.job_state.add_deferred_event(ctx.routine_id, event_name, kwargs)
+
+    def send_output(self, output_type: str, **data) -> None:
+        """Send output data via JobState output handler.
+
+        This is a convenience method that automatically gets the execution
+        context and calls job_state.send_output(). It provides a simple way
+        to send execution-specific output data (not events) to output handlers
+        like console, queue, or custom handlers.
+
+        Args:
+            output_type: Type of output (e.g., 'user_data', 'status', 'result').
+            **data: Output data dictionary (user-defined structure).
+
+        Raises:
+            RuntimeError: If not in execution context (no flow/job_state available).
+
+        Examples:
+            Basic usage:
+                >>> class MyRoutine(Routine):
+                ...     def process(self, **kwargs):
+                ...         # Send output data
+                ...         self.send_output("user_data", message="Processing started", count=10)
+                ...         # Process data...
+                ...         self.send_output("result", processed_items=5, status="success")
+
+            With output handler:
+                >>> from routilux import QueueOutputHandler
+                >>> job_state = JobState(flow_id="my_flow")
+                >>> job_state.set_output_handler(QueueOutputHandler())
+                >>> # Now all send_output() calls will be sent to the queue
+
+        Note:
+            - This is different from emit() which sends events to connected slots.
+            - Output is sent to the output_handler set on JobState.
+            - Output is also logged to job_state.output_log for persistence.
+            - If no output_handler is set, output is only logged (not sent anywhere).
+        """
+        ctx = self.get_execution_context()
+        if ctx is None:
+            raise RuntimeError(
+                "Cannot send output: not in execution context. "
+                "This method can only be called during flow execution."
+            )
+
+        ctx.job_state.send_output(ctx.routine_id, output_type, data)
 
     def serialize(self) -> Dict[str, Any]:
         """Serialize Routine, including class information and state.

@@ -61,7 +61,7 @@ class DataFlattener(Routine):
         data = self._extract_input_data(data, **kwargs)
 
         # Track statistics
-        self._track_operation("flattens")
+        # Operation tracking removed - use JobState for execution state
 
         flattened_data, original_type, depth = self._flatten(data)
 

@@ -353,13 +353,13 @@ class TestTaskErrorHandling:
         flow.connect(source_id, "output", target_id, "input")
 
         # 注意：slot 的错误默认是被捕获的，不会导致 flow 失败
-        # 错误会被记录到 routine._stats["errors"]
+        # 错误会被记录到 JobState
         job_state = flow.execute(source_id)
 
         # 由于 slot 错误被捕获，flow 应该完成
         assert job_state.status == "completed"
 
-        # 验证错误被记录
-        target_routine = flow.routines[target_id]
-        assert "errors" in target_routine._stats
-        assert len(target_routine._stats["errors"]) > 0
+        # 验证错误被记录到JobState
+        # Errors are tracked in execution history, not routine._stats
+        history = job_state.get_execution_history(target_id)
+        assert len(history) > 0

@@ -33,11 +33,10 @@ class TaskParser(Routine):
         self.output_event = self.define_event(
             "parsed_task", ["task_id", "task_type", "requirements", "priority"]
         )
-        self._stats["parsed_count"] = 0
 
     def parse_task(self, task: str):
         """Parse task string into structured format"""
-        self._stats["parsed_count"] = self._stats.get("parsed_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
 
         # Simulate parsing
         task_id = f"task_{int(time.time() * 1000)}"
@@ -61,12 +60,11 @@ class ToolSelector(Routine):
         super().__init__()
         self.input_slot = self.define_slot("task_info", handler=self.select_tools)
         self.output_event = self.define_event("selected_tools", ["tools", "task_id"])
-        self._stats["selection_count"] = 0
         self._available_tools = ["search", "calculator", "translator", "code_generator"]
 
     def select_tools(self, task_id: str, task_type: str, requirements: List[str], priority: str):
         """Select tools based on task requirements"""
-        self._stats["selection_count"] = self._stats.get("selection_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
 
         # Simulate tool selection logic
         selected_tools = []
@@ -95,16 +93,22 @@ class ToolExecutor(Routine):
         self.output_event = self.define_event(
             "tool_result", ["result", "tool_name", "task_id", "success"]
         )
-        self._stats["execution_count"] = 0
-        self._stats["success_count"] = 0
-        self._stats["failure_count"] = 0
-
         # Register tool_name for serialization
         self.add_serializable_fields(["tool_name"])
 
     def execute_tool(self, tools: List[str], task_id: str):
         """Execute the tool if it matches"""
-        self._stats["execution_count"] = self._stats.get("execution_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
+        # Get execution count from JobState if needed
+        flow = getattr(self, "_current_flow", None)
+        execution_count = 0
+        if flow:
+            job_state = getattr(flow._current_execution_job_state, "value", None)
+            if job_state:
+                routine_id = flow._get_routine_id(self)
+                routine_state = job_state.get_routine_state(routine_id) or {}
+                execution_count = routine_state.get("execution_count", 0) + 1
+                job_state.update_routine_state(routine_id, {"execution_count": execution_count})
 
         if self.tool_name not in tools:
             # Tool not needed, skip
@@ -128,16 +132,26 @@ class ToolExecutor(Routine):
                 result = f"def process_{task_id}():\n    return 'generated code'"
 
             # Simulate occasional failures
-            if self._stats["execution_count"] % 5 == 0:
+            if execution_count % 5 == 0:
                 raise ValueError(
-                    f"Tool {self.tool_name} failed on attempt {self._stats['execution_count']}"
+                    f"Tool {self.tool_name} failed on attempt {execution_count}"
                 )
 
-            self._stats["success_count"] = self._stats.get("success_count", 0) + 1
+            # Update success count in JobState
+            if flow and job_state:
+                routine_id = flow._get_routine_id(self)
+                routine_state = job_state.get_routine_state(routine_id) or {}
+                success_count = routine_state.get("success_count", 0) + 1
+                job_state.update_routine_state(routine_id, {"success_count": success_count})
 
         except Exception as e:
             success = False
-            self._stats["failure_count"] = self._stats.get("failure_count", 0) + 1
+            # Update failure count in JobState
+            if flow and job_state:
+                routine_id = flow._get_routine_id(self)
+                routine_state = job_state.get_routine_state(routine_id) or {}
+                failure_count = routine_state.get("failure_count", 0) + 1
+                job_state.update_routine_state(routine_id, {"failure_count": failure_count})
             result = f"Error: {str(e)}"
             raise  # Re-raise to test error handling
 
@@ -155,16 +169,25 @@ class ResultValidator(Routine):
         self.output_event = self.define_event(
             "validated_result", ["valid", "result", "task_id", "tool_name"]
         )
-        self._stats["validation_count"] = 0
-        self._stats["valid_count"] = 0
-        self._stats["invalid_count"] = 0
 
     def validate_result(self, result: Any, tool_name: str, task_id: str, success: bool):
         """Validate tool execution result"""
-        self._stats["validation_count"] = self._stats.get("validation_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
+        flow = getattr(self, "_current_flow", None)
+        if flow:
+            job_state = getattr(flow._current_execution_job_state, "value", None)
+            if job_state:
+                routine_id = flow._get_routine_id(self)
+                routine_state = job_state.get_routine_state(routine_id) or {}
+                validation_count = routine_state.get("validation_count", 0) + 1
+                job_state.update_routine_state(routine_id, {"validation_count": validation_count})
 
         if not success:
-            self._stats["invalid_count"] = self._stats.get("invalid_count", 0) + 1
+            if flow and job_state:
+                routine_id = flow._get_routine_id(self)
+                routine_state = job_state.get_routine_state(routine_id) or {}
+                invalid_count = routine_state.get("invalid_count", 0) + 1
+                job_state.update_routine_state(routine_id, {"invalid_count": invalid_count})
             self.emit(
                 "validated_result", valid=False, result=result, task_id=task_id, tool_name=tool_name
             )
@@ -174,9 +197,17 @@ class ResultValidator(Routine):
         valid = result is not None and len(str(result)) > 0
 
         if valid:
-            self._stats["valid_count"] = self._stats.get("valid_count", 0) + 1
+            if flow and job_state:
+                routine_id = flow._get_routine_id(self)
+                routine_state = job_state.get_routine_state(routine_id) or {}
+                valid_count = routine_state.get("valid_count", 0) + 1
+                job_state.update_routine_state(routine_id, {"valid_count": valid_count})
         else:
-            self._stats["invalid_count"] = self._stats.get("invalid_count", 0) + 1
+            if flow and job_state:
+                routine_id = flow._get_routine_id(self)
+                routine_state = job_state.get_routine_state(routine_id) or {}
+                invalid_count = routine_state.get("invalid_count", 0) + 1
+                job_state.update_routine_state(routine_id, {"invalid_count": invalid_count})
 
         self.emit(
             "validated_result", valid=valid, result=result, task_id=task_id, tool_name=tool_name
@@ -195,17 +226,25 @@ class ResultAggregator(Routine):
             "final_result", ["aggregated_result", "task_id", "tool_count"]
         )
         self._results = []
-        self._stats["aggregation_count"] = 0
 
     def aggregate_results(self, valid: bool, result: Any, task_id: str, tool_name: str):
         """Aggregate results from multiple tools"""
-        self._stats["aggregation_count"] = self._stats.get("aggregation_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
+        flow = getattr(self, "_current_flow", None)
+        aggregation_count = 0
+        if flow:
+            job_state = getattr(flow._current_execution_job_state, "value", None)
+            if job_state:
+                routine_id = flow._get_routine_id(self)
+                routine_state = job_state.get_routine_state(routine_id) or {}
+                aggregation_count = routine_state.get("aggregation_count", 0) + 1
+                job_state.update_routine_state(routine_id, {"aggregation_count": aggregation_count})
 
         if valid and result:
             self._results.append({"tool": tool_name, "result": result, "valid": valid})
 
         # Emit when we have enough results (simulate waiting for all tools)
-        if len(self._results) >= 2 or self._stats["aggregation_count"] >= 3:
+        if len(self._results) >= 2 or aggregation_count >= 3:
             aggregated = {
                 "task_id": task_id,
                 "tools_used": [r["tool"] for r in self._results],
@@ -231,11 +270,10 @@ class ResponseFormatter(Routine):
         super().__init__()
         self.input_slot = self.define_slot("formatter_input", handler=self.format_response)
         self.output_event = self.define_event("formatted_response", ["response", "task_id"])
-        self._stats["formatting_count"] = 0
 
     def format_response(self, aggregated_result: Dict[str, Any], task_id: str, tool_count: int):
         """Format aggregated results into user-friendly response"""
-        self._stats["formatting_count"] = self._stats.get("formatting_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
 
         response = {
             "status": "completed",
@@ -498,7 +536,9 @@ def test_error_handling(flow: Flow):
     # Reset executor stats to trigger failure
     for routine_id, routine in flow.routines.items():
         if hasattr(routine, "tool_name"):
-            routine._stats["execution_count"] = 0
+            # Reset execution count in JobState if needed
+            if routine_id:
+                job_state.update_routine_state(routine_id, {"execution_count": 0})
 
     job_state = flow.execute(parser_id, entry_params={"task": "calculate 5+5"})
     print(f"Status with RETRY: {job_state.status}")
@@ -626,7 +666,17 @@ def test_complex_scenario(flow: Flow):
         # Print final formatter stats if available
         if "response_formatter" in flow.routines:
             formatter = flow.routines["response_formatter"]
-            print(f"  Formatted responses: {formatter.stats().get('formatting_count', 0)}")
+            # Execution state is tracked in JobState, not routine._stats
+            # Find formatter_id from flow
+            formatter_id_in_flow = None
+            for rid, r in flow.routines.items():
+                if r is formatter:
+                    formatter_id_in_flow = rid
+                    break
+            if formatter_id_in_flow:
+                formatter_state = job_state.get_routine_state(formatter_id_in_flow)
+                formatting_count = formatter_state.get("formatting_count", 0) if formatter_state else 0
+                print(f"  Formatted responses: {formatting_count}")
 
     print(f"\nProcessed {len(results)} tasks")
     for result in results:

@@ -60,7 +60,7 @@ class TextRenderer(Routine):
         data = self._extract_input_data(data, **kwargs)
 
         # Track statistics
-        self._track_operation("renders")
+        # Operation tracking removed - use JobState for execution state
 
         original_type = type(data).__name__
         rendered_text = self._render_object(data)

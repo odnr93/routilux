@@ -86,7 +86,7 @@ class DataValidator(Routine):
         data = self._extract_input_data(data, **kwargs)
 
         # Track statistics
-        self._track_operation("validations")
+        # Operation tracking removed - use JobState for execution state
 
         # Get rules from input or config
         rules = rules or self.get_config("rules", {})
@@ -139,10 +139,10 @@ class DataValidator(Routine):
 
         # Emit result
         if errors:
-            self._track_operation("validations", success=False, error_count=len(errors))
+            # Operation tracking removed - use JobState for execution state)
             self.emit("invalid", errors=errors, data=data)
         else:
-            self._track_operation("validations", success=True)
+            # Operation tracking removed - use JobState for execution state
             self.emit("valid", validated_data=data)
 
     def _validate_field(

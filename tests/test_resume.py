@@ -30,7 +30,6 @@ class TestBasicResume:
                 self.output_event = self.define_event("output", ["data"])
 
             def process(self, data):
-                self._stats["processed"] = True
                 self.emit("output", data="B")
 
         class RoutineC(Routine):

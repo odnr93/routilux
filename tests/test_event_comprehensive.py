@@ -48,10 +48,12 @@ class TestEventConcurrentEmit:
         # 等待所有并发任务完成
         flow.wait_for_completion(timeout=2.0)
 
-        # 验证错误被记录到 stats
-        assert "errors" in failing._stats, f"Expected 'errors' in stats, got: {failing._stats}"
-        assert len(failing._stats["errors"]) > 0
+        # 验证错误被记录到JobState
+        failing_id = failing_id
         assert job_state.status == "completed"
+        # Errors are tracked in execution history, not routine._stats
+        history = job_state.get_execution_history(failing_id)
+        assert len(history) > 0
 
     def test_concurrent_emit_without_flow(self):
         """测试并发模式下 emit 但没有提供 flow"""
@@ -163,7 +165,10 @@ class TestEventEdgeCases:
         # 如果状态是 completed，说明错误被继续处理
         # 如果状态是 failed，检查是否有错误记录
         if job_state.status == "completed":
-            assert "errors" in target._stats
+            # Errors are tracked in execution history, not routine._stats
+            target_id = target_id
+            history = job_state.get_execution_history(target_id)
+            assert len(history) > 0
         else:
             # failed 状态也是可以接受的
             pass

@@ -3,6 +3,25 @@ Working with Flows
 
 Flows orchestrate multiple routines and manage their execution using a unified event queue mechanism. This guide explains the new architecture and how to create and use flows.
 
+**Understanding Flow's Role is Critical**
+
+``Flow`` is responsible for **workflow structure and static configuration**:
+
+- **Workflow Structure**: Which routines exist and how they're connected
+- **Static Configuration**: Node-level static parameters (execution strategy, max_workers, error handlers)
+- **Connection Management**: Links events to slots with parameter mapping
+- **Execution Orchestration**: Manages event queue, task scheduling, and thread pool
+
+**What Flow Does NOT Do**:
+
+- ❌ Store runtime execution state (that's ``JobState``'s job)
+- ❌ Store business data (that's ``JobState.shared_data``'s job)
+- ❌ Implement node functionality (that's ``Routine``'s job)
+- ❌ Handle execution-specific output (that's ``JobState.output_handler``'s job)
+
+**Key Principle**: Flow is a **template** that can be executed multiple times.
+Each execution creates a new, independent ``JobState`` for runtime state.
+
 Architecture Overview
 ---------------------
 

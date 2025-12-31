@@ -1,180 +1,30 @@
 State Management
 =================
 
-In this tutorial, you'll learn how to track execution state, statistics, and
-monitor your workflows using Routilux's built-in state management features.
+In this tutorial, you'll learn how to track execution state and monitor your
+workflows using Routilux's built-in state management features.
 
 Learning Objectives
 -------------------
 
 By the end of this tutorial, you'll be able to:
 
-- Track routine execution statistics
-- Use the ``_stats`` dictionary for custom metrics
-- Access JobState for execution tracking
-- Use helper methods for state management
+- Track execution state using JobState
+- Store routine-specific state in JobState
+- Access execution history
 - Monitor workflow performance
+- Use shared data areas for execution-wide state
 
-Step 1: Basic Statistics Tracking
------------------------------------
+Step 1: Understanding JobState
+-------------------------------
 
-Every routine has a ``_stats`` dictionary for tracking execution metrics:
+JobState is the central mechanism for tracking execution state. Each execution
+creates a unique JobState that tracks:
 
-.. code-block:: python
-   :linenos:
-
-   from routilux import Flow, Routine
-
-   class Counter(Routine):
-       def __init__(self):
-           super().__init__()
-           self.input_slot = self.define_slot("input", handler=self.count)
-       
-       def count(self, value=None, **kwargs):
-           # Track operations automatically
-           self._track_operation("counting", success=True)
-           
-           # Use helper methods for stats
-           self.increment_stat("total_count")
-           self.set_stat("last_value", value or kwargs.get("value", "unknown"))
-           
-           # Direct access also works
-           self._stats["custom_metric"] = self._stats.get("custom_metric", 0) + 1
-
-   class DataSource(Routine):
-       def __init__(self):
-           super().__init__()
-           self.trigger_slot = self.define_slot("trigger", handler=self.send)
-           self.output_event = self.define_event("output", ["value"])
-       
-       def send(self, **kwargs):
-           for i in range(3):
-               self.emit("output", value=f"item_{i}")
-
-   flow = Flow(flow_id="stats_flow")
-   
-   source = DataSource()
-   counter = Counter()
-   
-   source_id = flow.add_routine(source, "source")
-   counter_id = flow.add_routine(counter, "counter")
-   
-   flow.connect(source_id, "output", counter_id, "input")
-   
-   job_state = flow.execute(source_id)
-   
-   # Access statistics
-   print(f"Counter stats: {counter.stats()}")
-   print(f"Execution status: {job_state.status}")
-
-**Expected Output**:
-
-.. code-block:: text
-
-   Counter stats: {'counting': {'success': 3, 'total': 3}, 'total_count': 3, 'last_value': 'item_2', 'custom_metric': 3}
-   Execution status: completed
-
-**Key Points**:
-
-- ``_stats`` dictionary is automatically available in all routines
-- ``_track_operation()`` tracks operation success/failure
-- ``increment_stat()`` and ``set_stat()`` are convenient helpers
-- ``stats()`` returns all statistics in a readable format
-
-Step 2: Using Helper Methods
-------------------------------
-
-Routilux provides several helper methods for state management:
-
-.. code-block:: python
-   :linenos:
-
-   from routilux import Flow, Routine
-
-   class StatefulProcessor(Routine):
-       def __init__(self):
-           super().__init__()
-           self.input_slot = self.define_slot("input", handler=self.process)
-           self.output_event = self.define_event("output", ["result"])
-           
-           # Initialize stats
-           self.set_stat("processed_count", 0)
-           self.set_stat("error_count", 0)
-       
-       def process(self, data=None, **kwargs):
-           data_value = data or kwargs.get("data", "")
-           
-           try:
-               # Process data
-               result = data_value.upper()
-               
-               # Track success
-               self._track_operation("processing", success=True)
-               self.increment_stat("processed_count")
-               self.set_stat("last_processed", data_value)
-               
-               self.emit("output", result=result)
-               
-           except Exception as e:
-               # Track failure
-               self._track_operation("processing", success=False)
-               self.increment_stat("error_count")
-               self.set_stat("last_error", str(e))
-
-   class DataSource(Routine):
-       def __init__(self):
-           super().__init__()
-           self.trigger_slot = self.define_slot("trigger", handler=self.send)
-           self.output_event = self.define_event("output", ["data"])
-       
-       def send(self, **kwargs):
-           for item in ["hello", "world", "routilux"]:
-               self.emit("output", data=item)
-
-   flow = Flow(flow_id="helper_flow")
-   
-   source = DataSource()
-   processor = StatefulProcessor()
-   
-   source_id = flow.add_routine(source, "source")
-   processor_id = flow.add_routine(processor, "processor")
-   
-   flow.connect(source_id, "output", processor_id, "input")
-   
-   job_state = flow.execute(source_id)
-   
-   # Check stats
-   stats = processor.stats()
-   print(f"Processed: {processor.get_stat('processed_count', 0)}")
-   print(f"Errors: {processor.get_stat('error_count', 0)}")
-   print(f"Last processed: {processor.get_stat('last_processed', 'none')}")
-
-**Expected Output**:
-
-.. code-block:: text
-
-   Processed: 3
-   Errors: 0
-   Last processed: routilux
-
-**Available Helper Methods**:
-
-- ``set_stat(key, value)``: Set a stat value
-- ``get_stat(key, default=None)``: Get a stat value with default
-- ``increment_stat(key, amount=1)``: Increment a numeric stat
-- ``_track_operation(name, success=True)``: Track operation metrics
-- ``stats()``: Get all statistics
-
-**Key Points**:
-
-- Initialize stats in ``__init__()`` if needed
-- Use helper methods for type-safe operations
-- ``get_stat()`` provides safe access with defaults
-
-Step 3: Accessing JobState
----------------------------
-
-JobState tracks overall execution state and history:
+- Execution status (pending, running, completed, failed, etc.)
+- Execution history (all routine executions)
+- Routine states (per-routine execution information)
+- Shared data (execution-wide data storage)
 
 .. code-block:: python
    :linenos:
@@ -190,6 +40,14 @@ JobState tracks overall execution state and history:
        def process(self, data=None, **kwargs):
            data_value = data or kwargs.get("data", "")
            result = f"Processed: {data_value}"
+           
+           # Store execution state in JobState using get_execution_context()
+           ctx = self.get_execution_context()
+           if ctx:
+               ctx.job_state.update_routine_state(
+                   ctx.routine_id, {"last_processed": data_value, "processed": True}
+               )
+           
            self.emit("output", result=result)
 
    class DataSource(Routine):
@@ -223,8 +81,8 @@ JobState tracks overall execution state and history:
    print(f"Execution records: {len(history)}")
    
    # Check routine states
-   routine_states = job_state.get_routine_states()
-   print(f"Routines executed: {len(routine_states)}")
+   processor_state = job_state.get_routine_state(processor_id)
+   print(f"Processor state: {processor_state}")
 
 **Expected Output**:
 
@@ -234,61 +92,174 @@ JobState tracks overall execution state and history:
    Flow ID: jobstate_flow
    Created at: 2024-01-01 12:00:00
    Execution records: 2
-   Routines executed: 2
+   Processor state: {'last_processed': 'test', 'processed': True}
 
 **Key Points**:
 
-- JobState tracks overall execution state
-- ``status`` can be "completed", "failed", "cancelled", etc.
+- JobState is created for each execution
+- Execution state should be stored in JobState, not routine instance variables
+- ``update_routine_state()`` stores routine-specific state
+- ``get_routine_state()`` retrieves routine state
 - Execution history records all routine executions
-- Routine states track per-routine execution information
 
-Step 4: Monitoring Performance
+Step 2: Storing Routine State
 -------------------------------
 
-You can track performance metrics using statistics:
+Routines should store execution-specific state in JobState:
 
 .. code-block:: python
    :linenos:
 
    from routilux import Flow, Routine
-   import time
 
-   class TimedProcessor(Routine):
+   class StatefulProcessor(Routine):
        def __init__(self):
            super().__init__()
-           # Store configuration in _config (required for serialization)
-           self.set_config(name="Processor")
            self.input_slot = self.define_slot("input", handler=self.process)
            self.output_event = self.define_event("output", ["result"])
-           
-           self.set_stat("total_time", 0.0)
-           self.set_stat("call_count", 0)
        
        def process(self, data=None, **kwargs):
            data_value = data or kwargs.get("data", "")
-           name = self.get_config("name", "Processor")
            
-           # Measure processing time
-           start_time = time.time()
+           # Get execution context
+           ctx = self.get_execution_context()
+           if not ctx:
+               return
            
-           # Simulate processing
-           time.sleep(0.1)
-           result = f"{name}: {data_value.upper()}"
+           # Get current state
+           current_state = ctx.job_state.get_routine_state(ctx.routine_id) or {}
+           processed_count = current_state.get("processed_count", 0) + 1
            
-           elapsed = time.time() - start_time
-           
-           # Track performance
-           self.increment_stat("call_count")
-           self.set_stat("total_time", self.get_stat("total_time", 0.0) + elapsed)
-           self.set_stat("last_processing_time", elapsed)
-           
-           self.emit("output", result=result)
+           try:
+               # Process data
+               result = data_value.upper()
+               
+               # Update state in JobState
+               ctx.job_state.update_routine_state(
+                   ctx.routine_id,
+                   {
+                       "processed_count": processed_count,
+                       "last_processed": data_value,
+                       "last_result": result,
+                       "status": "success",
+                   },
+               )
+               
+               self.emit("output", result=result)
+               
+           except Exception as e:
+               # Update error state in JobState
+               error_count = current_state.get("error_count", 0) + 1
+               ctx.job_state.update_routine_state(
+                   ctx.routine_id,
+                   {
+                       "processed_count": processed_count,
+                       "error_count": error_count,
+                       "last_error": str(e),
+                       "status": "error",
+                   },
+               )
+               raise
+
+   class DataSource(Routine):
+       def __init__(self):
+           super().__init__()
+           self.trigger_slot = self.define_slot("trigger", handler=self.send)
+           self.output_event = self.define_event("output", ["data"])
        
-       def get_average_time(self):
-           count = self.get_stat("call_count", 0)
-           total = self.get_stat("total_time", 0.0)
-           return total / count if count > 0 else 0.0
+       def send(self, **kwargs):
+           for item in ["hello", "world", "routilux"]:
+               self.emit("output", data=item)
+
+   flow = Flow(flow_id="stateful_flow")
+   
+   source = DataSource()
+   processor = StatefulProcessor()
+   
+   source_id = flow.add_routine(source, "source")
+   processor_id = flow.add_routine(processor, "processor")
+   
+   flow.connect(source_id, "output", processor_id, "input")
+   
+   job_state = flow.execute(source_id)
+   flow.wait_for_completion(timeout=2.0)
+   
+   # Check routine state
+   processor_state = job_state.get_routine_state(processor_id)
+   print(f"Processed: {processor_state.get('processed_count', 0)}")
+   print(f"Errors: {processor_state.get('error_count', 0)}")
+   print(f"Last processed: {processor_state.get('last_processed', 'none')}")
+
+**Expected Output**:
+
+.. code-block:: text
+
+   Processed: 3
+   Errors: 0
+   Last processed: routilux
+
+**Key Points**:
+
+- Always get flow and job_state at the start of handler
+- Use ``get_routine_state()`` to get current state
+- Use ``update_routine_state()`` to update state
+- State is execution-specific and isolated per execution
+
+Step 3: Using Shared Data
+--------------------------
+
+JobState provides shared data areas for execution-wide state:
+
+.. code-block:: python
+   :linenos:
+
+   from routilux import Flow, Routine
+
+   class DataCollector(Routine):
+       def __init__(self):
+           super().__init__()
+           self.input_slot = self.define_slot("input", handler=self.collect)
+       
+       def collect(self, data=None, **kwargs):
+           data_value = data or kwargs.get("data", "")
+           
+           # Use get_execution_context() for convenient access
+           ctx = self.get_execution_context()
+           if ctx:
+               # Append to shared log
+               ctx.job_state.append_to_shared_log(
+                   {"action": "collected", "data": data_value, "routine": "collector"}
+               )
+               
+               # Update shared data
+               collected_items = ctx.job_state.get_shared_data("collected_items", [])
+               collected_items.append(data_value)
+               ctx.job_state.update_shared_data("collected_items", collected_items)
+
+   class DataProcessor(Routine):
+       def __init__(self):
+           super().__init__()
+           self.input_slot = self.define_slot("input", handler=self.process)
+           self.output_event = self.define_event("output", ["result"])
+       
+       def process(self, data=None, **kwargs):
+           data_value = data or kwargs.get("data", "")
+           
+           # Use get_execution_context() for convenient access
+           ctx = self.get_execution_context()
+           if ctx:
+               # Read shared data
+               collected_items = ctx.job_state.get_shared_data("collected_items", [])
+               
+               # Process with context
+               result = f"Processed {len(collected_items)} items, current: {data_value}"
+               
+               # Append to shared log
+               ctx.job_state.append_to_shared_log(
+                   {"action": "processed", "data": data_value, "result": result}
+               )
+               
+               self.emit("output", result=result)
 
    class DataSource(Routine):
        def __init__(self):
@@ -300,11 +271,88 @@ You can track performance metrics using statistics:
            for item in ["a", "b", "c"]:
                self.emit("output", data=item)
 
-   flow = Flow(flow_id="perf_flow")
+   flow = Flow(flow_id="shared_data_flow")
    
    source = DataSource()
-   processor = TimedProcessor()
-   processor.set_config(name="Processor")
+   collector = DataCollector()
+   processor = DataProcessor()
+   
+   source_id = flow.add_routine(source, "source")
+   collector_id = flow.add_routine(collector, "collector")
+   processor_id = flow.add_routine(processor, "processor")
+   
+   flow.connect(source_id, "output", collector_id, "input")
+   flow.connect(source_id, "output", processor_id, "input")
+   
+   job_state = flow.execute(source_id)
+   flow.wait_for_completion(timeout=2.0)
+   
+   # Check shared data
+   collected_items = job_state.get_shared_data("collected_items", [])
+   print(f"Collected items: {collected_items}")
+   
+   # Check shared log
+   log = job_state.get_shared_log()
+   print(f"Log entries: {len(log)}")
+   for entry in log:
+       print(f"  {entry}")
+
+**Expected Output**:
+
+.. code-block:: text
+
+   Collected items: ['a', 'b', 'c']
+   Log entries: 6
+     {'action': 'collected', 'data': 'a', 'routine': 'collector', 'timestamp': '...'}
+     {'action': 'collected', 'data': 'b', 'routine': 'collector', 'timestamp': '...'}
+     {'action': 'collected', 'data': 'c', 'routine': 'collector', 'timestamp': '...'}
+     {'action': 'processed', 'data': 'a', 'result': '...', 'timestamp': '...'}
+     {'action': 'processed', 'data': 'b', 'result': '...', 'timestamp': '...'}
+     {'action': 'processed', 'data': 'c', 'result': '...', 'timestamp': '...'}
+
+**Key Points**:
+
+- ``update_shared_data()`` stores execution-wide data
+- ``get_shared_data()`` retrieves shared data
+- ``append_to_shared_log()`` appends to execution log
+- ``get_shared_log()`` retrieves log entries
+- Shared data is execution-specific and isolated
+
+Step 4: Accessing Execution History
+------------------------------------
+
+Execution history records all routine executions:
+
+.. code-block:: python
+   :linenos:
+
+   from routilux import Flow, Routine
+
+   class SimpleProcessor(Routine):
+       def __init__(self):
+           super().__init__()
+           self.input_slot = self.define_slot("input", handler=self.process)
+           self.output_event = self.define_event("output", ["result"])
+       
+       def process(self, data=None, **kwargs):
+           data_value = data or kwargs.get("data", "")
+           result = f"Processed: {data_value}"
+           self.emit("output", result=result)
+
+   class DataSource(Routine):
+       def __init__(self):
+           super().__init__()
+           self.trigger_slot = self.define_slot("trigger", handler=self.send)
+           self.output_event = self.define_event("output", ["data"])
+       
+       def send(self, **kwargs):
+           for item in ["a", "b", "c"]:
+               self.emit("output", data=item)
+
+   flow = Flow(flow_id="history_flow")
+   
+   source = DataSource()
+   processor = SimpleProcessor()
    
    source_id = flow.add_routine(source, "source")
    processor_id = flow.add_routine(processor, "processor")
@@ -312,28 +360,37 @@ You can track performance metrics using statistics:
    flow.connect(source_id, "output", processor_id, "input")
    
    job_state = flow.execute(source_id)
+   flow.wait_for_completion(timeout=2.0)
    
-   # Check performance metrics
-   print(f"Calls: {processor.get_stat('call_count', 0)}")
-   print(f"Total time: {processor.get_stat('total_time', 0.0):.3f}s")
-   print(f"Average time: {processor.get_average_time():.3f}s")
-   print(f"Last time: {processor.get_stat('last_processing_time', 0.0):.3f}s")
+   # Get all execution history
+   history = job_state.get_execution_history()
+   print(f"Total records: {len(history)}")
+   
+   # Get history for specific routine
+   processor_history = job_state.get_execution_history(processor_id)
+   print(f"Processor executions: {len(processor_history)}")
+   
+   # Print history
+   for record in history:
+       print(f"  {record.routine_id}: {record.event_name} at {record.timestamp}")
 
 **Expected Output**:
 
 .. code-block:: text
 
-   Calls: 3
-   Total time: 0.301s
-   Average time: 0.100s
-   Last time: 0.100s
+   Total records: 4
+   Processor executions: 3
+     source: output at 2024-01-01 12:00:00
+     processor: output at 2024-01-01 12:00:00.001
+     source: output at 2024-01-01 12:00:00.002
+     processor: output at 2024-01-01 12:00:00.003
 
 **Key Points**:
 
-- Track timing information in your routines
-- Calculate averages and totals for performance monitoring
-- Use stats to identify bottlenecks
-- Performance metrics help optimize workflows
+- ``get_execution_history()`` returns all execution records
+- ``get_execution_history(routine_id)`` filters by routine
+- Each record contains routine_id, event_name, data, and timestamp
+- History is automatically recorded for all event emissions
 
 Step 5: Complete Example - Stateful Workflow
 ---------------------------------------------
@@ -354,31 +411,44 @@ Here's a complete example combining state management features:
        
        def generate(self, count=3, **kwargs):
            count = count or kwargs.get("count", 3)
+           
+           # Use get_execution_context() for convenient access
+           ctx = self.get_execution_context()
+           if ctx:
+               ctx.job_state.update_routine_state(ctx.routine_id, {"generated_count": count})
+           
            for i in range(count):
                self.emit("output", data=f"item_{i}")
-               self.increment_stat("generated_count")
 
    class Validator(Routine):
        def __init__(self):
            super().__init__()
            self.input_slot = self.define_slot("input", handler=self.validate)
            self.output_event = self.define_event("output", ["data", "valid"])
-           
-           self.set_stat("valid_count", 0)
-           self.set_stat("invalid_count", 0)
        
        def validate(self, data=None, **kwargs):
            data_value = data or kwargs.get("data", "")
+           
+           # Use get_execution_context() for convenient access
+           ctx = self.get_execution_context()
+           if not ctx:
+               return
+           
+           current_state = ctx.job_state.get_routine_state(ctx.routine_id) or {}
            
            # Simple validation: must contain "item"
            is_valid = "item" in str(data_value)
            
            if is_valid:
-               self.increment_stat("valid_count")
-               self._track_operation("validation", success=True)
+               valid_count = current_state.get("valid_count", 0) + 1
+               ctx.job_state.update_routine_state(
+                   ctx.routine_id, {"valid_count": valid_count, "last_valid": data_value}
+               )
            else:
-               self.increment_stat("invalid_count")
-               self._track_operation("validation", success=False)
+               invalid_count = current_state.get("invalid_count", 0) + 1
+               ctx.job_state.update_routine_state(
+                   ctx.routine_id, {"invalid_count": invalid_count, "last_invalid": data_value}
+               )
            
            self.emit("output", data=data_value, valid=is_valid)
 
@@ -386,17 +456,24 @@ Here's a complete example combining state management features:
        def __init__(self):
            super().__init__()
            self.input_slot = self.define_slot("input", handler=self.aggregate)
-           
-           self.set_stat("total_received", 0)
-           self.set_stat("total_valid", 0)
        
        def aggregate(self, data=None, valid=None, **kwargs):
            data_value = data or kwargs.get("data", "")
            is_valid = valid if valid is not None else kwargs.get("valid", False)
            
-           self.increment_stat("total_received")
-           if is_valid:
-               self.increment_stat("total_valid")
+           # Use get_execution_context() for convenient access
+           ctx = self.get_execution_context()
+           if ctx:
+               current_state = ctx.job_state.get_routine_state(ctx.routine_id) or {}
+               
+               total_received = current_state.get("total_received", 0) + 1
+               total_valid = current_state.get("total_valid", 0)
+               if is_valid:
+                   total_valid += 1
+               
+               ctx.job_state.update_routine_state(
+                   ctx.routine_id, {"total_received": total_received, "total_valid": total_valid}
+               )
            
            print(f"Aggregated: {data_value} (valid={is_valid})")
 
@@ -415,13 +492,22 @@ Here's a complete example combining state management features:
        flow.connect(validator_id, "output", agg_id, "input")
        
        job_state = flow.execute(source_id, entry_params={"count": 5})
+       flow.wait_for_completion(timeout=2.0)
        
-       print("\n=== Statistics ===")
-       print(f"Source generated: {source.get_stat('generated_count', 0)}")
-       print(f"Validator - Valid: {validator.get_stat('valid_count', 0)}, "
-             f"Invalid: {validator.get_stat('invalid_count', 0)}")
-       print(f"Aggregator - Total: {aggregator.get_stat('total_received', 0)}, "
-             f"Valid: {aggregator.get_stat('total_valid', 0)}")
+       print("\n=== Execution State ===")
+       source_state = job_state.get_routine_state(source_id)
+       validator_state = job_state.get_routine_state(validator_id)
+       aggregator_state = job_state.get_routine_state(agg_id)
+       
+       print(f"Source generated: {source_state.get('generated_count', 0)}")
+       print(
+           f"Validator - Valid: {validator_state.get('valid_count', 0)}, "
+           f"Invalid: {validator_state.get('invalid_count', 0)}"
+       )
+       print(
+           f"Aggregator - Total: {aggregator_state.get('total_received', 0)}, "
+           f"Valid: {aggregator_state.get('total_valid', 0)}"
+       )
        print(f"\nExecution status: {job_state.status}")
 
    if __name__ == "__main__":
@@ -437,7 +523,7 @@ Here's a complete example combining state management features:
    Aggregated: item_3 (valid=True)
    Aggregated: item_4 (valid=True)
 
-   === Statistics ===
+   === Execution State ===
    Source generated: 5
    Validator - Valid: 5, Invalid: 0
    Aggregator - Total: 5, Valid: 5
@@ -446,64 +532,86 @@ Here's a complete example combining state management features:
 
 **Key Points**:
 
-- Combine multiple state tracking techniques
-- Track both success and failure metrics
-- Use stats to understand workflow behavior
-- State management helps with debugging and monitoring
+- Store all execution state in JobState
+- Use ``update_routine_state()`` to update state
+- Use ``get_routine_state()`` to retrieve state
+- State is execution-specific and isolated per execution
 
 Common Pitfalls
 ---------------
 
-**Pitfall 1: Not initializing stats**
+**Pitfall 1: Modifying routine instance variables during execution**
 
 .. code-block:: python
    :emphasize-lines: 3
 
    def process(self, **kwargs):
-       # Assumes stat exists
-       self.increment_stat("count")  # May fail if not initialized
+       # ❌ Don't do this - breaks execution isolation
+       self.counter += 1
+       self.data.append(kwargs)
 
-**Solution**: Initialize stats in ``__init__()`` or use ``get_stat()`` with defaults.
-
-**Pitfall 2: Using wrong stat keys**
-
-.. code-block:: python
-   :emphasize-lines: 1, 4
-
-   self.set_stat("processed_count", 0)  # Set as "processed_count"
-   
-   # Later...
-   count = self.get_stat("process_count", 0)  # Wrong key! (missing 'ed')
-
-**Solution**: Use consistent naming, or define constants for stat keys.
-
-**Pitfall 3: Not tracking failures**
+**Solution**: Store execution state in JobState:
 
 .. code-block:: python
-   :emphasize-lines: 4
 
-   try:
-       result = process_data()
-       self._track_operation("processing", success=True)
-   except Exception:
-       # Forgot to track failure!
-       pass
+   def process(self, **kwargs):
+       # Use get_execution_context() for convenient access
+       ctx = self.get_execution_context()
+       if ctx:
+           current_state = ctx.job_state.get_routine_state(ctx.routine_id) or {}
+           counter = current_state.get("counter", 0) + 1
+           ctx.job_state.update_routine_state(ctx.routine_id, {"counter": counter})
 
-**Solution**: Always track both success and failure cases.
+**Pitfall 2: Not checking for flow and job_state**
+
+.. code-block:: python
+   :emphasize-lines: 2
+
+   def process(self, **kwargs):
+       job_state = flow._current_execution_job_state.value  # May fail if not in flow context
+
+**Solution**: Use ``get_execution_context()`` which handles all checks:
+
+.. code-block:: python
+
+   def process(self, **kwargs):
+       ctx = self.get_execution_context()
+       if ctx:
+           # Safe to use ctx.job_state here
+           ctx.job_state.update_routine_state(ctx.routine_id, {"processed": True})
+
+**Pitfall 3: Using wrong routine_id**
+
+.. code-block:: python
+   :emphasize-lines: 3
+
+   def process(self, **kwargs):
+       # ❌ Wrong - self._id is memory address, not routine_id in flow
+       job_state.update_routine_state(self._id, {"processed": True})
+
+**Solution**: Use ``get_execution_context()`` which provides the correct routine_id:
+
+.. code-block:: python
+
+   def process(self, **kwargs):
+       ctx = self.get_execution_context()
+       if ctx:
+           # ctx.routine_id is the correct routine_id from flow
+           ctx.job_state.update_routine_state(ctx.routine_id, {"processed": True})
 
 Best Practices
 --------------
 
-1. **Initialize stats in __init__()**: Set default values for all stats you'll use
-2. **Use helper methods**: Prefer ``set_stat()``, ``get_stat()``, ``increment_stat()``
-3. **Track both success and failure**: Use ``_track_operation()`` for both cases
-4. **Use descriptive stat names**: Make it clear what each stat represents
-5. **Check stats regularly**: Monitor stats to understand workflow behavior
-6. **Document stat meanings**: Comment what each stat tracks
+1. **Always store execution state in JobState**: Never modify routine instance variables during execution
+2. **Use get_execution_context()**: Use ``get_execution_context()`` for convenient access to flow, job_state, and routine_id
+3. **Use send_output() for output**: Use ``send_output()`` to send execution-specific output (not events)
+4. **Use emit_deferred_event() for pause/resume**: Use ``emit_deferred_event()`` to emit events that will be processed on resume
+5. **Use get_routine_state() first**: Get current state before updating to avoid overwriting
+6. **Use shared data for execution-wide state**: Use ``update_shared_data()`` and ``append_to_shared_log()``
+7. **Access execution history**: Use ``get_execution_history()`` to track all executions
 
 Next Steps
 ----------
 
 Now that you understand state management, let's move on to :doc:`error_handling`
 to learn how to build resilient workflows that handle errors gracefully.
-

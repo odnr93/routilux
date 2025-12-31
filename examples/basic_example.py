@@ -25,7 +25,7 @@ class DataSource(Routine):
         """Handle trigger and emit data through the output event"""
         # Extract data from kwargs if not provided directly
         output_data = data or kwargs.get("data", "default_data")
-        self._stats["emitted_count"] = self._stats.get("emitted_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
         self.emit("output", data=output_data)
 
 
@@ -48,7 +48,7 @@ class DataProcessor(Routine):
 
         # Process the data
         self.processed_data = f"Processed: {data_value}"
-        self._stats["processed_count"] = self._stats.get("processed_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
 
         # Emit the result
         self.emit("output", result=self.processed_data)
@@ -71,7 +71,7 @@ class DataSink(Routine):
             result_value = result
 
         self.final_result = result_value
-        self._stats["received_count"] = self._stats.get("received_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
         print(f"Final result: {self.final_result}")
 
 
@@ -100,10 +100,9 @@ def main():
 
     # Check results
     print(f"\nExecution Status: {job_state.status}")
-    print(f"Source Stats: {source.stats()}")
-    print(f"Processor Stats: {processor.stats()}")
-    print(f"Sink Stats: {sink.stats()}")
     print(f"Final Result: {sink.final_result}")
+    # Execution state is tracked in JobState, not routine._stats
+    print(f"Execution History: {len(job_state.execution_history)} records")
 
     assert job_state.status == "completed"
     assert sink.final_result == "Processed: Hello, World!"

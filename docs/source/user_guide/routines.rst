@@ -219,37 +219,79 @@ Tasks are processed in queue order:
 - Long chains don't block shorter ones
 - Fair progress for all active chains
 
-Statistics
-----------
+Understanding Routine's Role
+------------------------------
 
-Track routine statistics using the ``_stats`` dictionary:
+**Routine is responsible for function implementation**:
 
-.. code-block:: python
+- **What each node does**: Define slots, events, and handler logic
+- **Static Configuration**: Store in ``_config`` dictionary (set via ``set_config()``)
+- **No Runtime State**: Routines **must not** modify instance variables during execution
 
-   self._stats["processed_count"] = self._stats.get("processed_count", 0) + 1
+**What Routine Does NOT Do**:
 
-Or use the convenient ``_track_operation()`` method for consistent tracking:
+- ❌ Store runtime execution state (that's ``JobState``'s job)
+- ❌ Store business data (that's ``JobState.shared_data``'s job)
+- ❌ Define workflow structure (that's ``Flow``'s job)
+- ❌ Handle execution-specific output (that's ``JobState.output_handler``'s job)
+
+**Critical Constraint**: The same routine object can be used by multiple concurrent executions.
+Modifying instance variables would cause data corruption. All execution-specific state
+must be stored in ``JobState``.
+
+Execution State Management
+---------------------------
+
+Use ``get_execution_context()`` for convenient access to execution handles:
 
 .. code-block:: python
 
    def process_data(self, data):
-       try:
-           # Process the data
-           result = self.process(data)
-           # Track successful operation
-           self._track_operation("processing", success=True, items_processed=1)
-           return result
-       except Exception as e:
-           # Track failed operation
-           self._track_operation("processing", success=False, error=str(e))
-           raise
+       # Get execution context (flow, job_state, routine_id)
+       ctx = self.get_execution_context()
+       if ctx:
+           # Store execution-specific state in JobState
+           current_state = ctx.job_state.get_routine_state(ctx.routine_id) or {}
+           processed_count = current_state.get("processed_count", 0) + 1
+           ctx.job_state.update_routine_state(
+               ctx.routine_id, {"processed_count": processed_count}
+           )
+           
+           # Store business data in JobState
+           ctx.job_state.update_shared_data("last_processed", data)
+           ctx.job_state.append_to_shared_log({"action": "process", "data": data})
+           
+           # Send output via JobState
+           self.send_output("user_data", message="Processing", value=data)
 
-Retrieve statistics:
+**Using get_execution_context()**:
+
+The ``get_execution_context()`` method returns an ``ExecutionContext`` object containing
+``flow``, ``job_state``, and ``routine_id``:
 
 .. code-block:: python
 
-   stats = routine.stats()
-   print(stats)  # {"processed_count": 1, "total_processing": 1, "successful_processing": 1, ...}
+   ctx = self.get_execution_context()
+   if ctx:
+       # Access flow, job_state, and routine_id
+       ctx.flow
+       ctx.job_state
+       ctx.routine_id
+       
+       # Or unpack
+       flow, job_state, routine_id = ctx
+
+**Retrieve execution state after execution**:
+
+.. code-block:: python
+
+   # After execution
+   routine_state = job_state.get_routine_state(routine_id)
+   print(routine_state)  # {"processed_count": 1, ...}
+   
+   # Access shared data
+   shared_data = job_state.get_shared_data("last_processed")
+   shared_log = job_state.get_shared_log()
 
 Getting Slots and Events
 ------------------------

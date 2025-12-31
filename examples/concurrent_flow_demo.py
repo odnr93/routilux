@@ -34,7 +34,6 @@ class DataFetcher(Routine):
         super().__init__()
         self.input_slot = self.define_slot("trigger", handler=self.fetch_data)
         self.output_event = self.define_event("data_fetched", ["data", "source", "timestamp"])
-        self._stats["fetch_count"] = 0
 
     def configure(self, source_name: str = None, delay: float = 0.2):
         """Configure the fetcher"""
@@ -50,7 +49,7 @@ class DataFetcher(Routine):
 
     def fetch_data(self, **kwargs):
         """Simulate fetching data from a source (I/O operation)"""
-        self._stats["fetch_count"] = self._stats.get("fetch_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
 
         # Simulate network delay
         time.sleep(self.delay)
@@ -81,7 +80,6 @@ class DataProcessor(Routine):
         self.output_event = self.define_event(
             "data_processed", ["result", "processor_id", "processing_time"]
         )
-        self._stats["process_count"] = 0
 
     def configure(self, processor_id: str = None):
         """Configure the processor"""
@@ -93,7 +91,7 @@ class DataProcessor(Routine):
 
     def process_data(self, data: Dict[str, Any], source: str, timestamp: float):
         """Process the fetched data"""
-        self._stats["process_count"] = self._stats.get("process_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
 
         start_time = time.time()
 
@@ -126,12 +124,11 @@ class DataAggregator(Routine):
             "processed_data", handler=self.aggregate, merge_strategy="append"
         )
         self.output_event = self.define_event("aggregated", ["final_result", "total_count"])
-        self._stats["aggregation_count"] = 0
         self._collected_results = []
 
     def aggregate(self, result: Dict[str, Any], processor_id: str, processing_time: float):
         """Aggregate processed results"""
-        self._stats["aggregation_count"] = self._stats.get("aggregation_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
 
         self._collected_results.append(
             {"result": result, "processor_id": processor_id, "processing_time": processing_time}

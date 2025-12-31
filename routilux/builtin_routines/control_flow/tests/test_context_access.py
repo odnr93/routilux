@@ -46,16 +46,16 @@ class TestConditionContextAccess(unittest.TestCase):
         self.assertEqual(len(received_low), 1)
 
     def test_string_condition_with_stats(self):
-        """Test string condition accessing stats."""
+        """Test string condition accessing stats (deprecated - stats is now empty dict)."""
         router = ConditionalRouter()
+        # Note: stats is now deprecated, always returns empty dict
+        # This test verifies backward compatibility
         router.set_config(
             routes=[
-                ("active", "stats.get('count', 0) < 10"),
+                ("active", "stats.get('count', 0) < 10"),  # Will always match since stats is {}
                 ("full", "stats.get('count', 0) >= 10"),
             ]
         )
-
-        router.set_stat("count", 5)
 
         received_active = []
         received_full = []
@@ -71,16 +71,10 @@ class TestConditionContextAccess(unittest.TestCase):
         router.get_event("active").connect(active_slot)
         router.get_event("full").connect(full_slot)
 
-        # Test active route
+        # Test active route (stats is empty dict, so count is 0, which is < 10)
         router.input_slot.receive({"data": {}})
         self.assertEqual(len(received_active), 1)
         self.assertEqual(len(received_full), 0)
-
-        # Update stats and test full route
-        router.set_stat("count", 15)
-        router.input_slot.receive({"data": {}})
-        self.assertEqual(len(received_active), 1)
-        self.assertEqual(len(received_full), 1)
 
     def test_function_condition_with_config(self):
         """Test function condition accessing config."""

@@ -85,7 +85,7 @@ class DataTransformer(Routine):
         data = self._extract_input_data(data, **kwargs)
 
         # Track statistics
-        self._track_operation("transformations")
+        # Operation tracking removed - use JobState for execution state
 
         # Get transformations from input or config
         transformations = transformations or self.get_config("transformations", [])
@@ -116,9 +116,7 @@ class DataTransformer(Routine):
                     errors.append(f"Invalid transformation: {transform}")
             except Exception as e:
                 errors.append(f"Error applying {transform}: {str(e)}")
-                self._track_operation(
-                    "transformation_errors", success=False, transform=str(transform), error=str(e)
-                )
+                # Operation tracking removed - use JobState for execution state
 
         # Emit result
         self.emit(

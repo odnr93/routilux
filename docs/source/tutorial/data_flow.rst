@@ -397,5 +397,5 @@ Next Steps
 ----------
 
 Now that you understand data flow, let's move on to :doc:`state_management` to
-learn how to track execution state, statistics, and monitor your workflows.
+learn how to track execution state and monitor your workflows.
 

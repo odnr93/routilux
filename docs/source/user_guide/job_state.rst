@@ -3,20 +3,41 @@ JobState: Execution State Management
 
 The ``JobState`` object is central to routilux's execution model. It represents the **execution state** of a single workflow execution, completely decoupled from the ``Flow`` (workflow definition).
 
+**Understanding JobState's Role is Critical**
+
+``JobState`` is responsible for **all runtime state and business data**:
+
+- **Execution State**: Status, routine states, execution history
+- **Business Data**: Intermediate processing data (``shared_data``, ``shared_log``)
+- **Output Handling**: Execution-specific output (``output_handler``, ``output_log``)
+- **Deferred Events**: Events to be emitted on resume
+- **Pause Points**: Checkpoints for resumption
+
+**What JobState Does NOT Do**:
+
+- ❌ Define workflow structure (that's ``Flow``'s job)
+- ❌ Implement node functionality (that's ``Routine``'s job)
+- ❌ Store static configuration (that's ``Routine._config``)
+
+**Key Principle**: Everything that changes during execution belongs in ``JobState``.
+Everything that's static belongs in ``Flow`` or ``Routine._config``.
+
 Key Concepts
 ------------
 
-**Flow vs JobState**:
+**Flow vs JobState vs Routine**:
 
-- **Flow**: Static workflow definition (routines, connections, configuration)
-- **JobState**: Dynamic execution state (execution history, routine states, status)
+- **Flow**: Static workflow definition (routines, connections, static configuration)
+- **Routine**: Function implementation (what each node does, static config in ``_config``)
+- **JobState**: Dynamic execution state (runtime state, business data, output)
 
-This separation allows:
+This clear separation allows:
 
 - Multiple independent executions of the same flow
 - Proper serialization and recovery
 - Distributed execution across hosts
 - Independent pause/resume/cancel operations
+- Reusable routine objects across executions
 
 Creating JobState
 -----------------
@@ -189,6 +210,161 @@ Routine states track the status and metadata of each routine during execution:
 - Routine states are updated automatically during execution
 - Error handlers can update routine states
 - You can add custom metadata to routine states
+
+**Using get_execution_context() for Convenient Access**:
+
+Instead of manually accessing flow and job_state, use ``get_execution_context()``:
+
+.. code-block:: python
+   :linenos:
+
+   from routilux import Routine
+
+   class Processor(Routine):
+       def process(self, data=None, **kwargs):
+           # Get execution context (flow, job_state, routine_id)
+           ctx = self.get_execution_context()
+           if ctx:
+               # Update routine state
+               ctx.job_state.update_routine_state(ctx.routine_id, {"processed": True})
+               
+               # Store business data
+               ctx.job_state.update_shared_data("last_item", data)
+               
+               # Send output
+               self.send_output("user_data", message="Processed", value=data)
+
+**Key Points**:
+
+- ``get_execution_context()`` returns ``ExecutionContext(flow, job_state, routine_id)``
+- Use this method instead of manually accessing thread-local storage
+- Returns ``None`` if not in execution context
+
+Storing Business Data
+---------------------
+
+``JobState`` provides two mechanisms for storing intermediate business data:
+
+**1. shared_data (Read/Write Dictionary)**:
+
+Use ``shared_data`` for data that needs to be read and updated by multiple routines:
+
+.. code-block:: python
+   :linenos:
+
+   from routilux import Routine
+
+   class DataCollector(Routine):
+       def process(self, data=None, **kwargs):
+           ctx = self.get_execution_context()
+           if ctx:
+               # Store data
+               ctx.job_state.update_shared_data("items", data)
+               
+               # Read data
+               items = ctx.job_state.get_shared_data("items", default=[])
+               
+               # Update data
+               ctx.job_state.update_shared_data("count", len(items))
+
+**2. shared_log (Append-Only List)**:
+
+Use ``shared_log`` for append-only execution logs:
+
+.. code-block:: python
+   :linenos:
+
+   from routilux import Routine
+
+   class Logger(Routine):
+       def process(self, data=None, **kwargs):
+           ctx = self.get_execution_context()
+           if ctx:
+               # Append to log
+               ctx.job_state.append_to_shared_log({
+                   "timestamp": datetime.now().isoformat(),
+                   "action": "process",
+                   "data": data
+               })
+               
+               # Read log
+               log = ctx.job_state.get_shared_log()
+               print(f"Total log entries: {len(log)}")
+
+**Key Points**:
+
+- ``shared_data``: For read/write intermediate data
+- ``shared_log``: For append-only execution logs
+- Both are serialized with ``JobState``
+- Both are execution-specific (each execution has its own)
+
+Sending Output
+--------------
+
+Use ``send_output()`` to send execution-specific output data (not events):
+
+.. code-block:: python
+   :linenos:
+
+   from routilux import Routine
+   from routilux import QueueOutputHandler
+
+   class DataProcessor(Routine):
+       def process(self, data=None, **kwargs):
+           # Send output via JobState
+           self.send_output("user_data", message="Processing", value=data)
+           self.send_output("status", progress=50, status="in_progress")
+
+   # Set output handler on JobState
+   job_state = JobState(flow_id="my_flow")
+   job_state.set_output_handler(QueueOutputHandler())
+   
+   # Now all send_output() calls will be sent to the queue
+   flow.execute(entry_id)
+
+**Key Points**:
+
+- ``send_output()`` is different from ``emit()`` (which sends events to connected slots)
+- Output is sent to ``output_handler`` set on ``JobState``
+- Output is also logged to ``output_log`` for persistence
+- Use ``Routine.send_output()`` for convenient access (automatically gets execution context)
+
+**Output Handler Types**:
+
+- ``QueueOutputHandler``: Send output to a queue
+- ``CallbackOutputHandler``: Call a custom function with output
+- ``NullOutputHandler``: Discard output (for testing)
+
+Deferred Events
+---------------
+
+Use ``emit_deferred_event()`` to emit events that will be processed when the flow is resumed:
+
+.. code-block:: python
+   :linenos:
+
+   from routilux import Routine
+
+   class UserInteraction(Routine):
+       def process(self, data=None, **kwargs):
+           # Emit a deferred event
+           self.emit_deferred_event("user_input_required", question="What is your name?")
+           
+           # Pause the execution
+           ctx = self.get_execution_context()
+           if ctx:
+               ctx.flow.pause(ctx.job_state, reason="Waiting for user input")
+
+   # Later: Resume execution
+   # Deferred events are automatically emitted when flow.resume() is called
+   flow.resume(job_state)
+
+**Key Points**:
+
+- ``emit_deferred_event()`` stores event info in ``JobState.deferred_events``
+- Events are automatically emitted when ``flow.resume()`` is called
+- Useful for LLM agent workflows where you need to wait for user input
+- Use ``Routine.emit_deferred_event()`` for convenient access (automatically gets execution context)
 
 JobState Status
 ---------------

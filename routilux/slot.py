@@ -52,7 +52,7 @@ class Slot(Serializable):
         1. handler(data) - receives merged data as a dictionary
         2. ``handler(**data)`` - receives unpacked keyword arguments
 
-        Handler errors are caught and logged to routine._stats["errors"],
+        Handler errors are caught and logged to JobState execution history,
         but don't stop flow execution (slot handlers are always error-tolerant).
 
     Important Notes:
@@ -187,7 +187,7 @@ class Slot(Serializable):
 
         The handler is called immediately after merging. If the handler
         accepts ``**kwargs``, data is unpacked; otherwise it's passed as a dict.
-        Errors in the handler are caught and logged to routine._stats["errors"],
+        Errors in the handler are caught and logged to JobState execution history,
         but don't stop flow execution (slot handler errors are always tolerated).
 
         Args:
@@ -250,9 +250,22 @@ class Slot(Serializable):
                 import logging
 
                 logging.exception(f"Error in slot {self} handler: {e}")
-                self.routine._stats.setdefault("errors", []).append(
-                    {"slot": self.name, "error": str(e)}
-                )
+                # Errors are tracked in JobState execution history, not routine._stats
+                # Try to get flow and job_state to record error
+                flow = getattr(self.routine, "_current_flow", None)
+                if flow:
+                    job_state = getattr(flow._current_execution_job_state, "value", None)
+                    if job_state:
+                        # Find routine_id in flow
+                        routine_id = None
+                        for rid, r in flow.routines.items():
+                            if r is self.routine:
+                                routine_id = rid
+                                break
+                        if routine_id:
+                            job_state.record_execution(
+                                routine_id, "error", {"slot": self.name, "error": str(e)}
+                            )
 
     def _merge_data(self, new_data: Dict[str, Any]) -> Dict[str, Any]:
         """Merge new data into existing data according to merge_strategy.
@@ -431,9 +444,22 @@ class Slot(Serializable):
                     import logging
 
                     logging.exception(f"Error in slot {self} handler: {e}")
-                    self.routine._stats.setdefault("errors", []).append(
-                        {"slot": self.name, "error": str(e)}
-                    )
+                    # Errors are tracked in JobState execution history, not routine._stats
+                    # Try to get flow and job_state to record error
+                    flow = getattr(self.routine, "_current_flow", None)
+                    if flow:
+                        job_state = getattr(flow._current_execution_job_state, "value", None)
+                        if job_state:
+                            # Find routine_id in flow
+                            routine_id = None
+                            for rid, r in flow.routines.items():
+                                if r is self.routine:
+                                    routine_id = rid
+                                    break
+                            if routine_id:
+                                job_state.record_execution(
+                                    routine_id, "error", {"slot": self.name, "error": str(e)}
+                                )
 
     @staticmethod
     def _is_kwargs_handler(handler: Callable) -> bool:

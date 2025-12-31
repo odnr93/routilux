@@ -140,35 +140,120 @@ Key Features
 * **Serialization Support**: Full serialization/deserialization support for persistence
 * **Built-in Routines**: Rich set of ready-to-use routines for common tasks
 
-Architecture
-------------
+Architecture and Responsibility Separation
+------------------------------------------
 
-Routilux is built around a few core concepts:
+Understanding the clear separation of responsibilities between ``Flow``, ``Routine``, and ``JobState``
+is **crucial** for effectively using Routilux. This separation enables flexible, scalable, and maintainable
+workflow applications.
 
-**Routine**
-   The fundamental building block. A routine can have:
+**Core Components and Their Responsibilities**:
+
+**Routine** - Function Implementation
+   Routines define **what** each node does. They are pure function implementations:
    
    * **Slots** (0-N): Input mechanisms that receive data
    * **Events** (0-N): Output mechanisms that emit data
-   * **Stats**: A dictionary for tracking execution state
+   * **Configuration** (``_config``): Static configuration parameters (set via ``set_config()``)
+   * **No Runtime State**: Routines **must not** modify instance variables during execution
+   * **Execution Context Access**: Use ``get_execution_context()`` to access flow, job_state, and routine_id
+   
+   **Key Constraint**: The same routine object can be used by multiple concurrent executions.
+   Modifying instance variables would cause data corruption. All execution-specific state
+   must be stored in ``JobState``.
 
-**Flow**
-   Orchestrates multiple routines and their connections. Manages execution
-   using an event queue pattern, state, and error handling. Provides unified
-   execution model for both sequential and concurrent modes.
+**Flow** - Workflow Structure and Configuration
+   Flows define **how** routines are connected and configured:
+   
+   * **Workflow Structure**: Defines which routines exist and how they're connected
+   * **Static Configuration**: Node-level static parameters (execution strategy, max_workers, etc.)
+   * **Connection Management**: Links events to slots with parameter mapping
+   * **Execution Orchestration**: Manages event queue, task scheduling, and thread pool
+   * **No Runtime State**: Flow does **not** store execution state or business data
+   
+   **Key Point**: Flow is a **template** that can be executed multiple times, each with its own ``JobState``.
+
+**JobState** - Runtime State and Business Data
+   JobState stores **everything** related to a specific execution:
+   
+   * **Execution State**: Status (pending, running, paused, completed, failed, cancelled)
+   * **Routine States**: Per-routine execution state dictionaries
+   * **Execution History**: Complete record of all routine executions with timestamps
+   * **Business Data**: ``shared_data`` (read/write) and ``shared_log`` (append-only) for intermediate data
+   * **Output Handling**: ``output_handler`` and ``output_log`` for execution-specific output
+   * **Deferred Events**: Events to be emitted on resume
+   * **Pause Points**: Checkpoints for resumption
+   
+   **Key Point**: Each ``flow.execute()`` call creates a **new, independent** ``JobState``.
+   Multiple executions = multiple independent ``JobState`` objects.
 
 **Connection**
    Links events to slots with optional parameter mapping. Supports flexible
    connection patterns.
-
-**JobState**
-   Tracks execution state and history. Enables pause, resume, and recovery.
 
 **ErrorHandler**
    Configurable error handling with multiple strategies.
 
 **ExecutionTracker**
    Monitors execution performance and event flow.
+
+**Why This Separation Matters**:
+
+1. **Multiple Executions**: The same flow can run multiple times concurrently, each with its own state
+2. **Serialization**: Flow (structure) and JobState (state) are serialized separately, enabling:
+   - Workflow templates that can be shared
+   - Execution state that can be persisted and resumed
+   - Distributed execution across hosts
+3. **State Isolation**: Each execution's state is completely isolated, preventing data corruption
+4. **Reusability**: Routine objects can be reused across multiple executions without conflicts
+5. **Clarity**: Clear boundaries make code easier to understand, test, and maintain
+
+**Example - Correct Usage**:
+
+.. code-block:: python
+
+   from routilux import Flow, Routine
+   
+   class Processor(Routine):
+       def __init__(self):
+           super().__init__()
+           # Static configuration (set once)
+           self.set_config(threshold=10, timeout=30)
+           self.input_slot = self.define_slot("input", handler=self.process)
+           self.output_event = self.define_event("output", ["result"])
+       
+       def process(self, data=None, **kwargs):
+           # Read static config
+           threshold = self.get_config("threshold", 0)
+           
+           # Get execution context for runtime state
+           ctx = self.get_execution_context()
+           if ctx:
+               # Store execution-specific state in JobState
+               ctx.job_state.update_routine_state(ctx.routine_id, {"processed": True})
+               
+               # Store business data in JobState
+               ctx.job_state.update_shared_data("last_processed", data)
+               ctx.job_state.append_to_shared_log({"action": "process", "data": data})
+               
+               # Send output via JobState
+               self.send_output("user_data", message="Processing", value=data)
+           
+           # Emit event (for workflow flow)
+           self.emit("output", result=f"Processed: {data}")
+   
+   # Flow defines structure (static)
+   flow = Flow(flow_id="my_workflow")
+   processor = Processor()
+   processor_id = flow.add_routine(processor, "processor")
+   
+   # Each execution has its own JobState (runtime)
+   job_state1 = flow.execute(processor_id, entry_params={"data": "A"})
+   job_state2 = flow.execute(processor_id, entry_params={"data": "B"})
+   
+   # Each JobState is independent
+   assert job_state1.job_id != job_state2.job_id
+   assert job_state1.shared_data != job_state2.shared_data
 
 Design Principles
 ------------------

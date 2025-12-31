@@ -70,9 +70,15 @@ class TestTaskErrorHandling:
         flow._running = True  # Set running state
         handle_task_error(task, ValueError("Test error"), flow)
 
-        # Should record error in routine stats
-        assert "errors" in routine._stats
-        assert len(routine._stats["errors"]) > 0
+        # Should record error in JobState execution history
+        routine_id = None
+        for rid, r in flow.routines.items():
+            if r is routine:
+                routine_id = rid
+                break
+        if routine_id:
+            history = job_state.get_execution_history(routine_id)
+            assert len(history) > 0
         assert flow._running  # Should continue running
 
     def test_handle_task_error_skip_strategy(self):

@@ -2,15 +2,14 @@ Routine API
 ============
 
 The ``Routine`` class is the base class for all routines in Routilux. It provides
-core functionality for slots, events, statistics tracking, and configuration management.
+core functionality for slots, events, and configuration management.
 
 Key Features
 ------------
 
 * **Input Data Extraction**: Use ``_extract_input_data()`` to simplify slot handler data extraction
-* **Operation Tracking**: Use ``_track_operation()`` for consistent statistics tracking
 * **Configuration Management**: Store configuration in ``_config`` dictionary
-* **Statistics Tracking**: Track execution metrics in ``_stats`` dictionary
+* **Execution State**: Store execution state in JobState (not routine instance variables)
 
 .. automodule:: routilux.routine
    :members:
@@ -20,10 +19,17 @@ Key Features
 Helper Methods
 --------------
 
-The ``Routine`` class provides several helper methods for common operations:
+The ``Routine`` class provides helper methods for common operations:
 
 * ``_extract_input_data(data, **kwargs)``: Extract and normalize input data from slot parameters
-* ``_track_operation(operation_name, success=True, **metadata)``: Track operation statistics with metadata
 
 These methods are available to all routines that inherit from ``Routine``.
+
+Important Constraints
+---------------------
+
+* **During execution, routines MUST NOT modify any instance variables**
+* **All execution-related state should be stored in JobState**
+* Routines can only READ from ``_config`` during execution
+* Routines can WRITE to JobState (via ``job_state.update_routine_state()``, etc.)
 

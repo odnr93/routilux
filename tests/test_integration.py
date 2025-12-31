@@ -23,7 +23,6 @@ class TestCompleteFlow:
             def _handle_trigger(self, input_data=None, **kwargs):
                 input_data = input_data or kwargs.get("input_data", "default")
                 processed = f"Processed: {input_data}"
-                self._stats["input_processed"] = True
                 # Get flow from routine context
                 flow = getattr(self, "_current_flow", None)
                 self.emit("output", flow=flow, data=processed)
@@ -36,7 +35,6 @@ class TestCompleteFlow:
 
             def validate(self, data=None, **kwargs):
                 if data and len(str(data)) > 0:
-                    self._stats["validated"] = True
                     # Get flow from routine context
                     flow = getattr(self, "_current_flow", None)
                     self.emit("output", flow=flow, data=data)
@@ -49,7 +47,6 @@ class TestCompleteFlow:
 
             def process(self, data=None, **kwargs):
                 result = f"Final: {data}"
-                self._stats["processed"] = True
                 # Get flow from routine context
                 flow = getattr(self, "_current_flow", None)
                 self.emit("output", flow=flow, data=result)
@@ -62,7 +59,6 @@ class TestCompleteFlow:
             def format(self, data):
                 formatted = f"[FORMATTED] {data}"
                 results.append(formatted)
-                self._stats["formatted"] = True
 
         # 创建 routines
         input_proc = InputProcessor()
@@ -88,7 +84,6 @@ class TestCompleteFlow:
         # 验证
         assert job_state.status == "completed"
         assert len(results) > 0
-        assert input_proc.stats().get("input_processed") is True
 
     def test_error_handling_flow(self):
         """测试用例 2: 错误处理流程"""

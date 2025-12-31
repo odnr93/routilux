@@ -37,7 +37,7 @@ class ProcessingRoutine(Routine):
             data_value = data
 
         result = f"Processed: {data_value}"
-        self._stats["processed_count"] = self._stats.get("processed_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
         self.emit("output", result=result)
 
 

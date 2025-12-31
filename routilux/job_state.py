@@ -6,7 +6,7 @@ Used for recording flow execution state.
 
 import uuid
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable
 from serilux import register_serializable, Serializable
 import json
 
@@ -131,6 +131,19 @@ class JobState(Serializable):
         self.created_at: datetime = datetime.now()
         self.updated_at: datetime = datetime.now()
 
+        # Deferred events to be emitted on resume
+        self.deferred_events: List[Dict[str, Any]] = []
+
+        # Shared data area for execution-wide data storage
+        self.shared_data: Dict[str, Any] = {}
+        self.shared_log: List[Dict[str, Any]] = []
+
+        # Output handler for this execution (not serialized)
+        self.output_handler: Optional[Any] = None  # OutputHandler, but avoid circular import
+
+        # Output log for persistence (optional)
+        self.output_log: List[Dict[str, Any]] = []
+
         # Register serializable fields
         self.add_serializable_fields(
             [
@@ -144,6 +157,10 @@ class JobState(Serializable):
                 "updated_at",
                 "pause_points",
                 "pending_tasks",
+                "deferred_events",
+                "shared_data",
+                "shared_log",
+                "output_log",
             ]
         )
 
@@ -456,3 +473,137 @@ class JobState(Serializable):
             data["execution_history"] = records
 
         super().deserialize(data)
+
+    def add_deferred_event(
+        self, routine_id: str, event_name: str, data: Dict[str, Any]
+    ) -> None:
+        """Add a deferred event to be emitted on resume.
+
+        Args:
+            routine_id: ID of the routine that will emit the event.
+            event_name: Name of the event to emit.
+            data: Data to pass to the event.
+        """
+        self.deferred_events.append(
+            {
+                "routine_id": routine_id,
+                "event_name": event_name,
+                "data": data,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+        self.updated_at = datetime.now()
+
+    def update_shared_data(self, key: str, value: Any) -> None:
+        """Update shared data.
+
+        Thread-safe in CPython (GIL protected).
+
+        Args:
+            key: Key to update.
+            value: Value to set.
+        """
+        self.shared_data[key] = value
+        self.updated_at = datetime.now()
+
+    def get_shared_data(self, key: str, default: Any = None) -> Any:
+        """Get shared data.
+
+        Args:
+            key: Key to get.
+            default: Default value if key doesn't exist.
+
+        Returns:
+            Value for key, or default if key doesn't exist.
+        """
+        return self.shared_data.get(key, default)
+
+    def append_to_shared_log(self, entry: Dict[str, Any]) -> None:
+        """Append entry to shared log.
+
+        Thread-safe in CPython (GIL protected).
+
+        Args:
+            entry: Dictionary to append to log.
+        """
+        if not isinstance(entry, dict):
+            raise ValueError("Entry must be a dictionary")
+
+        # Automatically add timestamp if not present
+        if "timestamp" not in entry:
+            entry = entry.copy()
+            entry["timestamp"] = datetime.now().isoformat()
+
+        self.shared_log.append(entry)
+        self.updated_at = datetime.now()
+
+    def get_shared_log(
+        self, filter_func: Optional[Callable[[Dict[str, Any]], bool]] = None
+    ) -> List[Dict[str, Any]]:
+        """Get shared log, optionally filtered.
+
+        Args:
+            filter_func: Optional function to filter entries.
+                Should return True to include entry.
+
+        Returns:
+            List of log entries.
+        """
+        if filter_func is None:
+            return self.shared_log.copy()
+        return [entry for entry in self.shared_log if filter_func(entry)]
+
+    def set_output_handler(self, handler: Any) -> None:
+        """Set output handler for this execution.
+
+        Args:
+            handler: OutputHandler instance. Use None to disable output.
+        """
+        self.output_handler = handler
+
+    def send_output(
+        self, routine_id: str, output_type: str, data: Dict[str, Any]
+    ) -> None:
+        """Send output from routine.
+
+        This method is called by routines to send execution-specific data.
+        The output includes execution context (job_id, routine_id, timestamp).
+
+        Args:
+            routine_id: ID of the routine generating the output.
+            output_type: Type of output (e.g., 'user_data', 'status', 'result').
+            data: Output data dictionary (user-defined structure).
+
+        Note:
+            This method was renamed from emit_output() to avoid confusion
+            with Routine.emit() which emits events to connected slots.
+            Use Routine.send_output() for convenient access.
+        """
+        timestamp = datetime.now()
+
+        # Call output_handler if set
+        if self.output_handler:
+            try:
+                self.output_handler.handle(
+                    job_id=self.job_id,
+                    routine_id=routine_id,
+                    output_type=output_type,
+                    data=data,
+                    timestamp=timestamp,
+                )
+            except Exception as e:
+                # Output handler failure should not affect execution
+                import warnings
+
+                warnings.warn(f"Output handler failed: {e}")
+
+        # Optionally save to output_log for persistence
+        self.output_log.append(
+            {
+                "routine_id": routine_id,
+                "output_type": output_type,
+                "data": data,
+                "timestamp": timestamp.isoformat(),
+            }
+        )
+        self.updated_at = timestamp

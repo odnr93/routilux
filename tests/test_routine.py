@@ -13,8 +13,8 @@ class TestRoutineBasic:
         """测试用例 1: 创建 Routine 对象"""
         routine = Routine()
         assert routine._id is not None
-        assert isinstance(routine._stats, dict)
-        assert len(routine._stats) == 0
+        assert isinstance(routine._config, dict)
+        assert len(routine._config) == 0
 
     def test_define_slot(self):
         """测试用例 2: 定义 Slot"""
@@ -53,27 +53,26 @@ class TestRoutineBasic:
         assert "output" in routine._events
         assert routine.get_event("output") == event
 
-    def test_stats_method(self):
-        """测试用例 5: Stats 方法"""
+    def test_config_method(self):
+        """测试用例 5: Config 方法"""
         routine = Routine()
 
         # 初始状态为空
-        stats = routine.stats()
-        assert isinstance(stats, dict)
-        assert len(stats) == 0
+        config = routine.config()
+        assert isinstance(config, dict)
+        assert len(config) == 0
 
-        # 更新状态
-        routine._stats["count"] = 1
-        routine._stats["result"] = "success"
+        # 更新配置
+        routine.set_config(count=1, result="success")
 
-        # 验证 stats() 返回副本
-        stats = routine.stats()
-        assert stats["count"] == 1
-        assert stats["result"] == "success"
+        # 验证 config() 返回副本
+        config = routine.config()
+        assert config["count"] == 1
+        assert config["result"] == "success"
 
         # 修改返回的字典不应影响内部状态
-        stats["new_key"] = "new_value"
-        assert "new_key" not in routine._stats
+        config["new_key"] = "new_value"
+        assert "new_key" not in routine._config
 
 
 class TestRoutineEdgeCases:
@@ -128,14 +127,14 @@ class TestRoutineIntegration:
         routine.define_slot("input", handler=handler)
         routine.define_event("output", ["result"])
 
-        # 2. 更新状态
-        routine._stats["initialized"] = True
+        # 2. 更新配置
+        routine.set_config(initialized=True)
 
         # 3. 触发事件
         routine.emit("output", result="test")
 
-        # 4. 查询状态
-        stats = routine.stats()
-        assert stats["initialized"] is True
+        # 4. 查询配置
+        config = routine.config()
+        assert config["initialized"] is True
         assert "output" in routine._events
         assert "input" in routine._slots

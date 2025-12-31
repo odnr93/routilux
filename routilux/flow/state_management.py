@@ -214,13 +214,46 @@ def resume_flow(flow: "Flow", job_state: "JobState") -> "JobState":
     for routine_id, routine_state in job_state.routine_states.items():
         if routine_id in flow.routines:
             routine = flow.routines[routine_id]
-            if "stats" in routine_state:
-                routine._stats.update(routine_state["stats"])
+            # Routine state is restored to JobState, not routine._stats
 
     for r in flow.routines.values():
         r._current_flow = flow
 
     deserialize_pending_tasks(flow, job_state)
+
+    # Process deferred events (emit them before processing pending tasks)
+    for event_info in job_state.deferred_events:
+        routine_id = event_info.get("routine_id")
+        event_name = event_info.get("event_name")
+        event_data = event_info.get("data", {})
+
+        if routine_id in flow.routines:
+            routine = flow.routines[routine_id]
+            try:
+                # Ensure routine has the corresponding event
+                if routine.get_event(event_name):
+                    routine.emit(event_name, flow=flow, **event_data)
+                else:
+                    import warnings
+
+                    warnings.warn(
+                        f"Deferred event '{event_name}' not found in routine '{routine_id}'"
+                    )
+            except Exception as e:
+                import warnings
+
+                warnings.warn(
+                    f"Failed to emit deferred event '{event_name}' from routine '{routine_id}': {e}"
+                )
+        else:
+            import warnings
+
+            warnings.warn(
+                f"Routine '{routine_id}' not found in flow for deferred event"
+            )
+
+    # Clear deferred events (they have been processed)
+    job_state.deferred_events.clear()
 
     for task in flow._pending_tasks:
         flow._task_queue.put(task)
@@ -228,7 +261,11 @@ def resume_flow(flow: "Flow", job_state: "JobState") -> "JobState":
 
     from routilux.flow.event_loop import start_event_loop
 
-    if not flow._running:
+    # Check if event loop thread is still running
+    # If thread has stopped but _running is still True, restart it
+    if not flow._running or (
+        flow._execution_thread is not None and not flow._execution_thread.is_alive()
+    ):
         start_event_loop(flow)
 
     return job_state

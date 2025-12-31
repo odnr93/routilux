@@ -81,10 +81,25 @@ def handle_task_error(
             # Max retries reached or non-retryable exception, fall through to default
 
         elif error_handler.strategy.value == "continue":
-            if routine:
-                routine._stats.setdefault("errors", []).append(
-                    {"slot": task.slot.name, "error": str(error)}
-                )
+            # Errors are tracked in JobState execution history, not routine._stats
+            # Get JobState from task (preferred) or thread-local storage (fallback)
+            job_state = (
+                task.job_state
+                if task.job_state
+                else getattr(flow._current_execution_job_state, "value", None)
+            )
+            if job_state and routine:
+                # Find routine_id in flow
+                routine_id = None
+                for rid, r in flow.routines.items():
+                    if r is routine:
+                        routine_id = rid
+                        break
+                if routine_id:
+                    # Record error in execution history
+                    job_state.record_execution(
+                        routine_id, "error", {"slot": task.slot.name, "error": str(error)}
+                    )
             return
 
         elif error_handler.strategy.value == "skip":

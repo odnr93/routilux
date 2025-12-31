@@ -137,7 +137,6 @@ def execute_sequential(
             entry_routine_id,
             {
                 "status": "completed",
-                "stats": entry_routine.stats(),
                 "execution_time": execution_time,
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
@@ -167,7 +166,6 @@ def execute_sequential(
                     {
                         "status": "error_continued",
                         "error": str(e),
-                        "stats": entry_routine.stats(),
                     },
                 )
                 return job_state
@@ -208,7 +206,6 @@ def execute_sequential(
                         entry_routine_id,
                         {
                             "status": "completed",
-                            "stats": entry_routine.stats(),
                             "execution_time": execution_time,
                             "retry_count": error_handler.retry_count,
                         },

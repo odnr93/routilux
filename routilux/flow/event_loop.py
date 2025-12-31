@@ -21,8 +21,13 @@ def start_event_loop(flow: "Flow") -> None:
     Args:
         flow: Flow object.
     """
-    if flow._running:
+    # Check if event loop thread is already running
+    if flow._running and flow._execution_thread is not None and flow._execution_thread.is_alive():
         return
+
+    # If thread exists but is not alive, reset _running flag
+    if flow._execution_thread is not None and not flow._execution_thread.is_alive():
+        flow._running = False
 
     flow._running = True
     flow._execution_thread = threading.Thread(target=event_loop, args=(flow,), daemon=True)

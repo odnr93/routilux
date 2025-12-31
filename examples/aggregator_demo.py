@@ -250,7 +250,8 @@ def demo_aggregator():
 
     print("\n" + "=" * 70)
     print("Results:")
-    print(f"  Aggregator stats: {aggregator.stats()}")
+    # Execution state is tracked in JobState, not routine._stats
+    # Note: job_state is not available in this scope, execution state would be in JobState
     print(f"  Consumer received: {len(consumer.received_results)} aggregated result(s)")
     if consumer.received_results:
         print(f"  Total results in aggregation: {consumer.received_results[0]['count']}")

@@ -62,22 +62,6 @@ class TestRoutineConfigSerialization:
         assert new_routine._config["nested_list"] == [[1, 2], [3, 4]]
         assert new_routine._config["mixed"] == [{"key": "value"}, [1, 2, 3]]
 
-    def test_stats_must_be_serialized_and_restored(self):
-        """测试：_stats 必须被序列化和恢复"""
-        routine = Routine()
-        routine._stats["processed"] = 42
-        routine._stats["errors"] = [{"type": "ValueError", "message": "test"}]
-
-        data = routine.serialize()
-        assert "_stats" in data, "_stats 必须被序列化"
-
-        new_routine = Routine()
-        new_routine.deserialize(data)
-
-        # 严格验证：必须完全一致
-        assert new_routine._stats["processed"] == 42
-        assert new_routine._stats["errors"][0]["type"] == "ValueError"
-
 
 class TestFlowErrorHandlerSerialization:
     """测试 Flow 的 error_handler 序列化 - 必须完整恢复"""
@@ -122,7 +106,10 @@ class TestFlowRoundTripSerialization:
         flow = Flow(execution_strategy="concurrent", max_workers=10)
         flow.set_error_handler(ErrorHandler(strategy=ErrorStrategy.CONTINUE))
 
-        class TestRoutine(Routine):
+        from routilux.job_state import register_serializable
+
+        @register_serializable
+        class SerializationTestRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 # Define trigger slot for entry routine
@@ -133,7 +120,7 @@ class TestFlowRoundTripSerialization:
             def _handle_trigger(self, **kwargs):
                 pass
 
-        routine = TestRoutine()
+        routine = SerializationTestRoutine()
         routine_id = flow.add_routine(routine, "test")
 
         # 第一次序列化
@@ -307,7 +294,10 @@ class TestFlowDeserializeAndExecute:
         results = []
         results_lock = __import__("threading").Lock()
 
-        class SourceRoutine(Routine):
+        from routilux.job_state import register_serializable
+
+        @register_serializable
+        class SerializationSourceRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.outputevent = self.define_event("output", ["value"])
@@ -315,7 +305,8 @@ class TestFlowDeserializeAndExecute:
             def __call__(self):
                 self.emit("output", value=42, flow=flow)
 
-        class TargetRoutine(Routine):
+        @register_serializable
+        class SerializationTargetRoutine(Routine):
             def __init__(self):
                 super().__init__()
                 self.input_slot = self.define_slot("input", handler=self.process)
@@ -324,8 +315,8 @@ class TestFlowDeserializeAndExecute:
                 with results_lock:
                     results.append(value.get("value"))
 
-        source = SourceRoutine()
-        target = TargetRoutine()
+        source = SerializationSourceRoutine()
+        target = SerializationTargetRoutine()
 
         source_id = flow.add_routine(source, "source")
         target_id = flow.add_routine(target, "target")

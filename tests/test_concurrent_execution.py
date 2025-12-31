@@ -377,8 +377,15 @@ class TestConcurrentThreadSafety:
                 self.input_slot = self.define_slot("input", handler=self.process)
 
             def process(self, data):
-                # 更新 stats（应该线程安全）
-                self._stats["count"] = self._stats.get("count", 0) + 1
+                # Execution state should be stored in JobState, not routine._stats
+                flow = getattr(self, "_current_flow", None)
+                if flow:
+                    job_state = getattr(flow._current_execution_job_state, "value", None)
+                    if job_state:
+                        routine_id = flow._get_routine_id(self)
+                        current_state = job_state.get_routine_state(routine_id) or {}
+                        count = current_state.get("count", 0) + 1
+                        job_state.update_routine_state(routine_id, {"count": count})
 
                 # 更新共享计数器（用于验证）
                 with counter_lock:

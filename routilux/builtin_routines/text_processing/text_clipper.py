@@ -87,18 +87,19 @@ class TextClipper(Routine):
         preserve_tracebacks = self.get_config("preserve_tracebacks", True)
 
         # Track statistics
-        self._track_operation("clips")
+        # Operation tracking removed - use JobState for execution state
         original_length = len(text)
 
         # Preserve tracebacks if configured
         if preserve_tracebacks and "Traceback" in text:
             clipped_text = text
             was_clipped = False
-            self.increment_stat("traceback_preserved")
+            # Statistics tracking removed - use JobState for execution state
         else:
             clipped_text, was_clipped = self._clip_text(text, max_len)
             if was_clipped:
-                self.increment_stat("texts_clipped")
+                # Statistics tracking removed - use JobState for execution state
+                pass
 
         # Emit result
         self.emit(

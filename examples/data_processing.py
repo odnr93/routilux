@@ -22,7 +22,7 @@ class InputReader(Routine):
     def _handle_trigger(self, filename=None, **kwargs):
         """Handle trigger and simulate reading from a file"""
         raw_data = filename or kwargs.get("filename", "sample_data.txt")
-        self._stats["files_read"] = self._stats.get("files_read", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
         self.emit("output", raw_data=raw_data)
 
 
@@ -43,10 +43,10 @@ class DataValidator(Routine):
             data = raw_data
 
         if data and len(str(data)) > 0:
-            self._stats["validated_count"] = self._stats.get("validated_count", 0) + 1
+            # Execution state should be stored in JobState, not routine._stats
             self.emit("output", validated_data=data)
         else:
-            self._stats["validation_errors"] = self._stats.get("validation_errors", 0) + 1
+            # Execution state should be stored in JobState, not routine._stats
             self.emit("error", error_message="Invalid data")
 
 
@@ -66,7 +66,7 @@ class DataTransformer(Routine):
             data = validated_data
 
         transformed = f"TRANSFORMED_{data.upper()}"
-        self._stats["transformed_count"] = self._stats.get("transformed_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
         self.emit("output", transformed_data=transformed)
 
 
@@ -86,7 +86,7 @@ class DataWriter(Routine):
             data = transformed_data
 
         self.written_data.append(data)
-        self._stats["written_count"] = self._stats.get("written_count", 0) + 1
+        # Execution state should be stored in JobState, not routine._stats
         print(f"Written: {data}")
 
 
@@ -118,11 +118,9 @@ def main():
 
     # Check results
     print(f"\nExecution Status: {job_state.status}")
-    print(f"Reader Stats: {reader.stats()}")
-    print(f"Validator Stats: {validator.stats()}")
-    print(f"Transformer Stats: {transformer.stats()}")
-    print(f"Writer Stats: {writer.stats()}")
     print(f"Written Data: {writer.written_data}")
+    # Execution state is tracked in JobState, not routine._stats
+    print(f"Execution History: {len(job_state.execution_history)} records")
 
     assert job_state.status == "completed"
     assert len(writer.written_data) > 0

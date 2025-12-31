@@ -60,7 +60,7 @@ class ConditionalRouter(Routine):
             ...         ("full", "stats.get('count', 0) >= 10"),
             ...     ]
             ... )
-            >>> router.set_stat("count", 5)
+            >>> # Note: set_stat() is deprecated, use JobState for execution state
             >>> router.input_slot.receive({"data": {}})  # Routes to "active"
 
         Using dictionary conditions:
@@ -112,8 +112,7 @@ class ConditionalRouter(Routine):
         # Extract data using Routine helper method
         data = self._extract_input_data(data, **kwargs)
 
-        # Track statistics
-        self._track_operation("routes")
+        # Operation tracking removed - use JobState for execution state
 
         routes = self.get_config("routes", [])
         default_route = self.get_config("default_route", None)
@@ -152,7 +151,8 @@ class ConditionalRouter(Routine):
                                 if "config" in params:
                                     func_kwargs["config"] = self._config
                                 if "stats" in params:
-                                    func_kwargs["stats"] = self._stats
+                                    # Deprecated: stats is now in JobState, provide empty dict for backward compatibility
+                                    func_kwargs["stats"] = {}
                                 result = condition(**func_kwargs)
                             else:
                                 # Pass data as first positional arg, config as second
@@ -164,8 +164,9 @@ class ConditionalRouter(Routine):
                                 func_kwargs["data"] = data
                             if "config" in params:
                                 func_kwargs["config"] = self._config
-                            if "stats" in params:
-                                func_kwargs["stats"] = self._stats
+                                if "stats" in params:
+                                    # Deprecated: stats is now in JobState, provide empty dict for backward compatibility
+                                    func_kwargs["stats"] = {}
                             if func_kwargs:
                                 result = condition(**func_kwargs)
                             else:
@@ -185,8 +186,9 @@ class ConditionalRouter(Routine):
                         matched_routes.append(route_name)
                         if route_priority == "first_match":
                             break
-            except Exception as e:
-                self._track_operation("routes", success=False, route=route_name, error=str(e))
+            except Exception:
+                # Operation tracking removed - use JobState for execution state
+                pass
 
         # Route data
         if matched_routes:
@@ -197,7 +199,7 @@ class ConditionalRouter(Routine):
                     event = self.define_event(route_name, ["data", "route"])
 
                 self.emit(route_name, data=data, route=route_name)
-                self.increment_stat(f"routes_to_{route_name}")
+                # Statistics tracking removed - use JobState for execution state
         else:
             # Use default route
             if default_route:
@@ -205,11 +207,11 @@ class ConditionalRouter(Routine):
                 if event is None:
                     event = self.define_event(default_route, ["data", "route"])
                 self.emit(default_route, data=data, route=default_route)
-                self.increment_stat(f"routes_to_{default_route}")
+                # Statistics tracking removed - use JobState for execution state
             else:
                 # Emit to default output
                 self.emit("output", data=data, route="unmatched")
-                self.increment_stat("unmatched_routes")
+                # Statistics tracking removed - use JobState for execution state
 
     def _evaluate_dict_condition(self, data: Any, condition: Dict[str, Any]) -> bool:
         """Evaluate a dictionary-based condition.
@@ -282,10 +284,13 @@ class ConditionalRouter(Routine):
                 }
             }
             # Provide data, config, and stats to the expression
+            # Note: stats is now accessed from JobState, but for backward compatibility
+            # in string expressions, we provide an empty dict as stats
+            # Users should use JobState for execution state instead
             safe_locals = {
                 "data": data,
                 "config": self._config,
-                "stats": self._stats,
+                "stats": {},  # Deprecated: use JobState for execution state
             }
 
             result = eval(condition, safe_globals, safe_locals)

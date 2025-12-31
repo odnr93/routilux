@@ -57,8 +57,7 @@ class TimeProvider(Routine):
             data: Optional data dict. Can contain format override.
             **kwargs: Additional data from slot.
         """
-        # Track statistics
-        self.increment_stat("time_requests")
+        # Statistics tracking removed - use JobState for execution state
 
         # Get format from data or kwargs or config
         format_type = None

@@ -108,8 +108,8 @@ class TestResumeFlow:
         with pytest.raises(ValueError, match="not found in flow"):
             resume_flow(flow, job_state)
 
-    def test_resume_restores_routine_stats(self):
-        """Test resume restores routine stats."""
+    def test_resume_restores_routine_state(self):
+        """Test resume restores routine state in JobState."""
         flow = Flow(flow_id="flow1")
 
         class TestRoutine(Routine):
@@ -127,14 +127,17 @@ class TestResumeFlow:
         job_state.status = "paused"
         job_state.routine_states[routine_id] = {
             "status": "running",
-            "stats": {"processed": 5, "count": 10},
+            "processed": 5,
+            "count": 10,
         }
         flow._current_execution_job_state.value = job_state
 
         resume_flow(flow, job_state)
 
-        assert routine._stats["processed"] == 5
-        assert routine._stats["count"] == 10
+        # Routine state is stored in JobState, not routine._stats
+        restored_state = job_state.get_routine_state(routine_id)
+        assert restored_state["processed"] == 5
+        assert restored_state["count"] == 10
 
     def test_resume_deserializes_pending_tasks(self):
         """Test resume deserializes pending tasks."""

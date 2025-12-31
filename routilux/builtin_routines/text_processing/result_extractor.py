@@ -155,7 +155,7 @@ class ResultExtractor(Routine):
             data = ""  # Default to empty string for result extractor
 
         # Track statistics
-        self._track_operation("extractions")
+        # Operation tracking removed - use JobState for execution state
 
         # Perform extraction
         result = self._extract_with_strategy(data)
