@@ -305,7 +305,8 @@ RETRY Strategy
 * Retry happens with exponential backoff delay
 * Maximum number of retries is configurable
 * Only retries if exception type is in ``retryable_exceptions``
-* If all retries fail, execution stops
+* If all retries fail, execution stops and routine state is set to ``"failed"``
+* If retry succeeds, routine state is set to ``"completed"``
 
 **Configuration**:
 * ``max_retries``: Maximum number of retry attempts (default: 3)
@@ -442,6 +443,12 @@ RETRY Strategy
    # ValueError should stop immediately (not retryable)
    assert job_state.status == "failed"
    assert routine.call_count == 2  # Initial call + 1 retry (then ValueError stops)
+
+**Status After Retry**:
+
+* If retry succeeds: routine state is ``"completed"``, JobState status is ``"completed"``
+* If all retries fail: routine state is ``"failed"``, JobState status is ``"failed"``
+* ``wait_for_completion()`` will detect the ``"failed"`` routine state and set JobState status accordingly
 
 **Retryable Exceptions**:
 
@@ -621,18 +628,28 @@ execution errors.
 
 **Behavior**:
     * Regular slot handler errors are **always caught** and logged
-    * Errors are recorded in ``routine._stats["errors"]``
+    * Errors are recorded in ``JobState.execution_history`` (not ``routine._stats["errors"]``)
     * Flow execution **continues** (does not stop)
-    * Error handling strategies (STOP, CONTINUE, RETRY, SKIP) **do not apply** to
-      regular slot handler errors
+    * Error handling strategies (STOP, CONTINUE, RETRY, SKIP) **do not directly apply** to
+      regular slot handler errors (errors don't propagate to ``handle_task_error``)
     
     * **Exception**: Entry routine trigger slot handlers use ``call_handler(propagate_exceptions=True)``,
       so their errors **do propagate** and trigger Flow's error handling strategies
+    
+    * **Special Case**: If a routine has an error handler with STOP strategy, slot handler
+      errors will cause the routine state to be marked as ``"failed"``, which will be
+      detected by ``wait_for_completion()`` and result in JobState status being set to ``"failed"``
 
 **Why This Design?**:
 * Slot handlers process data from events, which may arrive asynchronously
 * Stopping the entire flow for a single slot handler error would be too disruptive
 * Errors are logged for debugging and monitoring
+* However, critical failures can still be detected through routine state checking
+
+**Error Recording**:
+* Slot handler errors are recorded in ``JobState.execution_history`` with event_name ``"error"``
+* If routine has STOP strategy error handler, routine state is also updated to ``{"status": "failed"}``
+* This allows ``wait_for_completion()`` to detect critical failures even for slot handler errors
 
 **Example**:
 
@@ -963,8 +980,9 @@ important considerations:
    flow.set_error_handler(error_handler)
    
    # Execute - routines run concurrently
+   from routilux.job_state import JobState
    job_state = flow.execute("routine_0")
-   flow.wait_for_completion()
+   JobState.wait_for_completion(flow, job_state)
    flow.shutdown()
    
    # Each routine's errors are handled independently
@@ -1805,6 +1823,154 @@ Use this guide to choose the right error handling strategy:
 * Optional enhancements
 * Caching operations
 * Non-essential features
+
+JobState Status Transitions and Error Strategy Impact
+======================================================
+
+Understanding how error handling strategies affect JobState status is crucial for
+building robust workflows. This section provides detailed tables showing all possible
+status transitions.
+
+JobState Status Values
+----------------------
+
+The ``JobState.status`` field can have the following values:
+
+* ``"pending"``: Flow created but not yet started
+* ``"running"``: Flow execution in progress
+* ``"completed"``: Flow execution completed successfully
+* ``"failed"``: Flow execution failed due to error
+* ``"paused"``: Flow execution paused (can be resumed)
+* ``"cancelled"``: Flow execution cancelled by user
+
+Routine State Status Values
+---------------------------
+
+Each routine's state (in ``job_state.routine_states[routine_id]``) can have:
+
+* ``"pending"``: Routine not yet executed
+* ``"running"``: Routine execution in progress
+* ``"completed"``: Routine executed successfully
+* ``"failed"``: Routine execution failed (critical failure)
+* ``"error_continued"``: Routine failed but execution continued (CONTINUE strategy)
+* ``"skipped"``: Routine was skipped (SKIP strategy)
+
+Status Transition Table: Error Strategies
+------------------------------------------
+
+The following table shows how different error handling strategies affect both
+JobState status and routine state status:
+
++------------------+------------------+------------------+------------------+------------------+
+| Strategy         | When             | JobState Status  | Routine Status   | Notes            |
++==================+==================+==================+==================+==================+
+| STOP             | Error occurs     | failed           | failed           | Immediate stop   |
++------------------+------------------+------------------+------------------+------------------+
+| CONTINUE         | Error occurs     | completed        | error_continued  | Error logged,    |
+|                  |                  |                  |                  | execution        |
+|                  |                  |                  |                  | continues        |
++------------------+------------------+------------------+------------------+------------------+
+| RETRY            | Retry succeeds   | completed        | completed        | After successful |
+|                  |                  |                  |                  | retry            |
++------------------+------------------+------------------+------------------+------------------+
+| RETRY            | All retries fail | failed           | failed           | Max retries      |
+|                  |                  |                  |                  | exceeded         |
++------------------+------------------+------------------+------------------+------------------+
+| RETRY            | Non-retryable    | failed           | failed           | Exception not in |
+|                  | exception        |                  |                  | retryable_exc... |
++------------------+------------------+------------------+------------------+------------------+
+| SKIP             | Error occurs     | completed        | skipped          | Routine skipped, |
+|                  |                  |                  |                  | flow continues   |
++------------------+------------------+------------------+------------------+------------------+
+
+**Key Points**:
+
+* **STOP**: Always results in ``failed`` status for both JobState and routine
+* **CONTINUE**: JobState is ``completed``, routine is ``error_continued``
+* **RETRY**: Status depends on whether retries succeed or all fail
+* **SKIP**: JobState is ``completed``, routine is ``skipped``
+
+Status Transition Table: Slot Handler Errors
+---------------------------------------------
+
+Slot handler errors are handled differently from entry routine errors:
+
++------------------+------------------+------------------+------------------+------------------+
+| Scenario         | Error Handler    | JobState Status  | Routine Status   | Notes            |
++==================+==================+==================+==================+==================+
+| Slot handler     | None             | completed        | (not set)        | Error logged to  |
+| error            |                  |                  |                  | execution        |
+|                  |                  |                  |                  | history only     |
++------------------+------------------+------------------+------------------+------------------+
+| Slot handler     | STOP strategy    | completed        | failed           | Error logged,    |
+| error            |                  |                  |                  | routine marked   |
+|                  |                  |                  |                  | as failed        |
++------------------+------------------+------------------+------------------+------------------+
+| Slot handler     | CONTINUE/RETRY/  | completed        | (not set)        | Error logged to  |
+| error            | SKIP strategy    |                  |                  | execution        |
+|                  |                  |                  |                  | history only     |
++------------------+------------------+------------------+------------------+------------------+
+
+**Important**: Slot handler errors are **always caught** and do not stop flow execution.
+However, if the routine has an error handler with STOP strategy, the routine state
+will be marked as ``failed``, which will be detected by ``wait_for_completion()``.
+
+Status Detection in wait_for_completion()
+------------------------------------------
+
+The ``JobState.wait_for_completion()`` method intelligently detects failures by
+checking routine states, not just execution history:
+
+**Detection Logic**:
+
+1. **Checks routine states** for ``"failed"`` or ``"error"`` status (not ``"error_continued"``)
+2. **Does NOT check execution history** alone (slot handler errors are logged but tolerated)
+3. **Distinguishes critical failures** from tolerated errors:
+   - Critical: routine status is ``"failed"`` or ``"error"`` → JobState becomes ``"failed"``
+   - Tolerated: routine status is ``"error_continued"`` → JobState becomes ``"completed"``
+   - Slot errors: only in execution history, routine status not ``"failed"`` → JobState becomes ``"completed"``
+
+**Example**:
+
+.. code-block:: python
+
+   from routilux.job_state import JobState
+   
+   # Wait for completion - automatically detects failures
+   completed = JobState.wait_for_completion(flow, job_state, timeout=60.0)
+   
+   # If routine states contain "failed" status, job_state.status will be "failed"
+   # If only "error_continued" or no routine failures, job_state.status will be "completed"
+
+**Why This Design?**:
+
+The distinction between routine state checking and execution history checking is crucial:
+
+* **Execution history** contains all events, including tolerated errors (slot handler errors,
+  CONTINUE strategy errors). Checking execution history alone would incorrectly mark
+  many successful workflows as failed.
+
+* **Routine state** reflects the actual outcome of each routine:
+  - ``"failed"`` or ``"error"`` = critical failure that should fail the workflow
+  - ``"error_continued"`` = tolerated error, workflow should be marked as completed
+  - ``"skipped"`` = intentionally skipped, workflow should be marked as completed
+  - ``"completed"`` = successful execution
+
+* **Result**: Only critical failures (routine state ``"failed"``) cause JobState to be
+  marked as ``"failed"``. Tolerated errors and slot handler errors don't cause workflow
+  failure.
+
+**Migration Note**:
+
+The old ``Flow.wait_for_completion()`` method only waited for the event loop thread
+to finish, without checking for errors. This could result in workflows with errors
+being marked as ``"completed"``. The new ``JobState.wait_for_completion()`` method
+provides comprehensive error detection and is the recommended approach.
+
+**Deprecation**:
+
+``Flow.wait_for_completion()`` is deprecated. Use ``JobState.wait_for_completion()``
+instead for proper error detection and status management.
 
 Quick Reference Table
 ---------------------

@@ -141,8 +141,10 @@ def test_pause_resume_with_job_state():
         print(f"Paused: {job_state.status}")
 
         # Resume
+        from routilux.job_state import JobState
+
         resumed = flow.resume(job_state)
-        flow.wait_for_completion(timeout=2.0)
+        JobState.wait_for_completion(flow, resumed, timeout=2.0)
         print(f"Resumed status: {resumed.status}")
     else:
         print(f"Execution completed immediately: {job_state.status}")

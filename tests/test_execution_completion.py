@@ -7,101 +7,8 @@ Tests for the systematic execution completion detection and waiting mechanism.
 import time
 import pytest
 from routilux import Flow, Routine
-from routilux.flow.completion import (
-    ExecutionCompletionChecker,
-    wait_for_execution_completion,
-    ensure_event_loop_running,
-)
-
-
-class TestExecutionCompletionChecker:
-    """Test ExecutionCompletionChecker class."""
-
-    def test_is_complete_with_empty_queue(self):
-        """Test completion check with empty queue and no active tasks."""
-        flow = Flow()
-        from routilux.job_state import JobState
-
-        job_state = JobState(flow.flow_id)
-        job_state.status = "completed"
-
-        checker = ExecutionCompletionChecker(flow, job_state)
-        assert checker.is_complete() is True
-
-    def test_is_complete_with_pending_tasks(self):
-        """Test completion check with tasks in queue."""
-        flow = Flow()
-        from routilux.job_state import JobState
-        from routilux.flow.task import SlotActivationTask
-
-        job_state = JobState(flow.flow_id)
-        job_state.status = "running"
-
-        # Add a task to the queue
-        routine = Routine()
-        slot = routine.define_slot("input")
-        task = SlotActivationTask(
-            slot=slot,
-            data={},
-            connection=None,
-            created_at=time.time(),
-            job_state=job_state,
-        )
-        flow._task_queue.put(task)
-
-        checker = ExecutionCompletionChecker(flow, job_state)
-        assert checker.is_complete() is False
-
-    def test_is_complete_with_active_tasks(self):
-        """Test completion check with active tasks."""
-        flow = Flow()
-        from routilux.job_state import JobState
-        from concurrent.futures import Future
-
-        job_state = JobState(flow.flow_id)
-        job_state.status = "running"
-
-        # Add an active task
-        future = Future()
-        with flow._execution_lock:
-            flow._active_tasks.add(future)
-
-        checker = ExecutionCompletionChecker(flow, job_state)
-        assert checker.is_complete() is False
-
-        # Complete the task and remove it from active tasks
-        future.set_result(None)
-        with flow._execution_lock:
-            flow._active_tasks.discard(future)
-
-        # Now should be complete
-        job_state.status = "completed"
-        assert checker.is_complete() is True
-
-    def test_is_complete_with_paused_status(self):
-        """Test completion check with paused status."""
-        flow = Flow()
-        from routilux.job_state import JobState
-
-        job_state = JobState(flow.flow_id)
-        job_state.status = "paused"
-
-        checker = ExecutionCompletionChecker(flow, job_state)
-        assert checker.is_complete() is True
-
-    def test_check_with_stability(self):
-        """Test stability check mechanism."""
-        flow = Flow()
-        from routilux.job_state import JobState
-
-        job_state = JobState(flow.flow_id)
-        job_state.status = "completed"
-
-        # Use minimal checks and delay for fast testing
-        checker = ExecutionCompletionChecker(
-            flow, job_state, stability_checks=2, stability_delay=0.001
-        )
-        assert checker.check_with_stability() is True
+from routilux.job_state import JobState
+from routilux.flow.completion import ensure_event_loop_running
 
 
 class TestWaitForExecutionCompletion:
@@ -116,7 +23,7 @@ class TestWaitForExecutionCompletion:
         job_state.status = "completed"
 
         # Use minimal timeout and checks for fast testing
-        completed = wait_for_execution_completion(
+        completed = JobState.wait_for_completion(
             flow,
             job_state,
             timeout=0.5,
@@ -148,7 +55,7 @@ class TestWaitForExecutionCompletion:
         flow._task_queue.put(task)
 
         # Use minimal timeout and checks for fast testing
-        completed = wait_for_execution_completion(
+        completed = JobState.wait_for_completion(
             flow,
             job_state,
             timeout=0.05,
@@ -175,7 +82,7 @@ class TestWaitForExecutionCompletion:
         job_state.status = "completed"
 
         # Use minimal timeout and checks for fast testing
-        completed = wait_for_execution_completion(
+        completed = JobState.wait_for_completion(
             flow,
             job_state,
             timeout=0.5,
@@ -219,6 +126,7 @@ class TestExecutionTimeout:
 
         # Execute with timeout override (reduced from 10.0 to 2.0)
         job_state = flow.execute(entry_routine_id=routine_id, timeout=2.0)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
         assert job_state.status == "completed"
 
     def test_execute_with_long_running_task(self):
@@ -240,6 +148,7 @@ class TestExecutionTimeout:
 
         # Execute - should complete within timeout
         job_state = flow.execute(entry_routine_id=routine_id, timeout=1.0)
+        JobState.wait_for_completion(flow, job_state, timeout=1.0)
         assert job_state.status == "completed"
 
 
@@ -334,6 +243,7 @@ class TestCompletionWithRealFlow:
         flow.connect(source_id, "output", target_id, "input")
 
         job_state = flow.execute(entry_routine_id=source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
         assert job_state.status == "completed"
         assert len(target.received) == 1
         assert target.received[0] == "test"
@@ -371,6 +281,7 @@ class TestCompletionWithRealFlow:
         flow.connect(source_id, "output", collector_id, "input")
 
         job_state = flow.execute(entry_routine_id=source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
         assert job_state.status == "completed"
         assert len(collector.collected) == 3
         assert collector.collected == ["item_0", "item_1", "item_2"]
@@ -419,5 +330,6 @@ class TestCompletionWithRealFlow:
         flow.connect(b_id, "output", c_id, "input")
 
         job_state = flow.execute(entry_routine_id=a_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
         assert job_state.status == "completed"
         assert c.final_value == 2

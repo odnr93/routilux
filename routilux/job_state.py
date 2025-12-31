@@ -5,10 +5,17 @@ Used for recording flow execution state.
 """
 
 import uuid
+import time
+import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Callable
+from typing import Dict, Any, List, Optional, Callable, TYPE_CHECKING
 from serilux import register_serializable, Serializable
 import json
+
+if TYPE_CHECKING:
+    from routilux.flow.flow import Flow
+
+logger = logging.getLogger(__name__)
 
 
 @register_serializable
@@ -588,7 +595,7 @@ class JobState(Serializable):
                     timestamp=timestamp,
                 )
             except Exception as e:
-                # Output handler failure should not affect execution
+                # Ignore output handler failures
                 import warnings
 
                 warnings.warn(f"Output handler failed: {e}")
@@ -603,3 +610,155 @@ class JobState(Serializable):
             }
         )
         self.updated_at = timestamp
+
+    @staticmethod
+    def wait_for_completion(
+        flow: "Flow",
+        job_state: "JobState",
+        timeout: Optional[float] = None,
+        stability_checks: int = 5,
+        check_interval: float = 0.1,
+        stability_delay: float = 0.05,
+        progress_callback: Optional[Callable[[int, int, str], None]] = None,
+    ) -> bool:
+        """Wait for flow execution to complete.
+
+        Args:
+            flow: Flow object to wait for.
+            job_state: JobState object to monitor.
+            timeout: Maximum time to wait in seconds. None for no timeout.
+            stability_checks: Number of consecutive checks required for stability.
+            check_interval: Interval between checks in seconds.
+            stability_delay: Delay between stability checks in seconds.
+            progress_callback: Optional callback function called periodically with
+                (queue_size, active_count, status) tuple.
+
+        Returns:
+            True if execution completed before timeout, False if timeout occurred.
+
+        Examples:
+            Basic usage:
+                >>> job_state = flow.execute(entry_routine_id, entry_params)
+                >>> completed = JobState.wait_for_completion(flow, job_state, timeout=300.0)
+                >>> if completed:
+                ...     print("Execution completed successfully")
+        """
+        checker = _ExecutionCompletionChecker(
+            flow=flow,
+            job_state=job_state,
+            stability_checks=stability_checks,
+            check_interval=check_interval,
+            stability_delay=stability_delay,
+        )
+
+        start_time = time.time()
+        last_progress_time = 0.0
+        progress_interval = 5.0
+
+        while True:
+            if timeout is not None:
+                elapsed = time.time() - start_time
+                if elapsed >= timeout:
+                    logger.warning(
+                        f"Execution completion wait timed out after {timeout} seconds. "
+                        f"Queue size: {flow._task_queue.qsize()}, "
+                        f"Active tasks: {len([f for f in flow._active_tasks if not f.done()])}, "
+                        f"Status: {job_state.status}"
+                    )
+                    return False
+
+            if checker.check_with_stability():
+                logger.debug("Execution completed successfully")
+                if job_state.status == "running":
+                    # Before setting to "completed", check if there are any critical failures
+                    # in routine states (not just errors in execution history)
+                    # We need to distinguish between:
+                    # 1. Critical failures: routine status is "failed" or "error" (not "error_continued")
+                    # 2. Tolerated errors: routine status is "error_continued" (CONTINUE strategy)
+                    # 3. Slot handler errors: only in execution history, routine status not "failed"
+                    has_critical_failure = False
+
+                    # Check routine states for critical failure status
+                    # Only "failed" or "error" (not "error_continued") indicate critical failures
+                    for routine_id, routine_state in job_state.routine_states.items():
+                        if isinstance(routine_state, dict):
+                            status = routine_state.get("status")
+                            # "error_continued" means error was tolerated (CONTINUE strategy)
+                            # Only "failed" or "error" indicate critical failures
+                            if status in ["failed", "error"]:
+                                has_critical_failure = True
+                                logger.debug(
+                                    f"Critical failure detected in routine state: {routine_id} has status {status}"
+                                )
+                                break
+
+                    if has_critical_failure:
+                        logger.warning(
+                            "Execution completed but critical failures detected in routine states. "
+                            "Setting status to 'failed' instead of 'completed'."
+                        )
+                        job_state.status = "failed"
+                    else:
+                        # No critical failures: errors in execution history are tolerated
+                        # (either CONTINUE strategy or slot handler errors that were caught)
+                        job_state.status = "completed"
+                return True
+
+            if progress_callback is not None:
+                current_time = time.time()
+                if current_time - last_progress_time >= progress_interval:
+                    queue_size = flow._task_queue.qsize()
+                    with flow._execution_lock:
+                        active_count = len([f for f in flow._active_tasks if not f.done()])
+                    progress_callback(queue_size, active_count, job_state.status)
+                    last_progress_time = current_time
+
+            time.sleep(check_interval)
+
+
+class _ExecutionCompletionChecker:
+    """Execution completion checker (internal)."""
+
+    def __init__(
+        self,
+        flow: "Flow",
+        job_state: "JobState",
+        stability_checks: int = 5,
+        check_interval: float = 0.1,
+        stability_delay: float = 0.05,
+    ):
+        self.flow = flow
+        self.job_state = job_state
+        self.stability_checks = stability_checks
+        self.check_interval = check_interval
+        self.stability_delay = stability_delay
+
+    def is_complete(self) -> bool:
+        """Check if execution is complete."""
+        if self.job_state.status in ["paused", "cancelled"]:
+            return True
+
+        if self.job_state.status == "failed":
+            return True
+
+        queue_empty = self.flow._task_queue.empty()
+        with self.flow._execution_lock:
+            active_tasks = [f for f in self.flow._active_tasks if not f.done()]
+            active_count = len(active_tasks)
+
+        if queue_empty and active_count == 0:
+            if self.job_state.status in ["completed", "failed", "paused", "cancelled"]:
+                return True
+            if self.job_state.status == "running":
+                return True
+
+        return False
+
+    def check_with_stability(self) -> bool:
+        """Check completion with stability verification."""
+        for _ in range(self.stability_checks):
+            if not self.is_complete():
+                return False
+            time.sleep(self.stability_delay)
+
+        return True

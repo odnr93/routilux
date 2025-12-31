@@ -6,6 +6,7 @@ to multiple connected slots, especially when downstream slots emit further event
 """
 
 from routilux import Flow, Routine
+from routilux.job_state import JobState
 
 
 class ExecutionOrderTracker:
@@ -116,7 +117,8 @@ class TestEventExecutionOrder:
         flow.connect("source", "output", "routine3", "input")
 
         # Execute
-        flow.execute("source")
+        job_state = flow.execute("source")
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # Verify execution order
         order = tracker.get_order()

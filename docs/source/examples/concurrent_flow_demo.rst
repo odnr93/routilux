@@ -141,15 +141,17 @@ Concurrent flows can be serialized and deserialized:
 Waiting for Completion
 ~~~~~~~~~~~~~~~~~~~~~~
 
-In concurrent execution, tasks run asynchronously. Use ``wait_for_completion()`` to wait for all tasks:
+In concurrent execution, tasks run asynchronously. Use ``JobState.wait_for_completion()`` to wait for all tasks:
 
 .. code-block:: python
 
+   from routilux.job_state import JobState
+   
    flow = Flow(execution_strategy="concurrent")
    job_state = flow.execute("entry_routine")
    
    # Wait for all concurrent tasks to complete
-   flow.wait_for_completion(timeout=10.0)
+   JobState.wait_for_completion(flow, job_state, timeout=10.0)
    
    # Now all tasks are guaranteed to be finished
 
@@ -160,10 +162,12 @@ Always properly shut down concurrent flows to clean up resources:
 
 .. code-block:: python
 
+   from routilux.job_state import JobState
+   
    flow = Flow(execution_strategy="concurrent")
    try:
        job_state = flow.execute("entry_routine")
-       flow.wait_for_completion(timeout=10.0)
+       JobState.wait_for_completion(flow, job_state, timeout=10.0)
    finally:
        flow.shutdown(wait=True)  # Clean up thread pool
 

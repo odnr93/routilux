@@ -243,10 +243,12 @@ def demo_aggregator():
 
     # Execute once - all search tasks will be triggered in the same execution
     print("\n🚀 Executing all search tasks (single execute, multiple emits)...")
-    flow.execute(trigger_id, entry_params={"query": "test query"})
+    job_state = flow.execute(trigger_id, entry_params={"query": "test query"})
 
     # Wait for all async tasks to complete
-    flow.wait_for_completion(timeout=2.0)
+    from routilux.job_state import JobState
+
+    JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
     print("\n" + "=" * 70)
     print("Results:")

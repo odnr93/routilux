@@ -313,6 +313,12 @@ Retrieve slots and events by name:
 Error Handling
 --------------
 
+Routines can handle exceptions in different ways depending on the error handling strategy
+configured. This section explains how routine exceptions affect routine state and JobState status.
+
+Setting Error Handlers
+~~~~~~~~~~~~~~~~~~~~~~~
+
 Set error handlers at the routine level:
 
 .. code-block:: python
@@ -328,7 +334,107 @@ Error handling priority:
 2. Flow-level error handler (if set)
 3. Default behavior (STOP)
 
-See :doc:`error_handling` for more details.
+Routine Exception Types
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Routines can encounter exceptions in two different contexts:
+
+1. **Entry Routine Execution Errors**: Errors raised in an entry routine's trigger slot
+   handler (when called by ``Flow.execute()``). These errors propagate to Flow's error
+   handling mechanisms and trigger error handling strategies (STOP, CONTINUE, RETRY, SKIP).
+
+2. **Slot Handler Errors**: Errors raised in slot handler functions when processing
+   received data from upstream routines. These errors are always caught and logged to
+   ``JobState.execution_history``, but they don't propagate to ``handle_task_error``
+   unless the routine has a STOP strategy error handler.
+
+Routine State After Exceptions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When a routine encounters an exception, its state in ``job_state.routine_states[routine_id]``
+is updated based on the error handling strategy:
+
+**Entry Routine Errors**:
+
++------------------+------------------+------------------+
+| Strategy         | Routine Status   | JobState Status  |
++==================+==================+==================+
+| STOP             | failed           | failed           |
++------------------+------------------+------------------+
+| CONTINUE         | error_continued  | completed        |
++------------------+------------------+------------------+
+| RETRY (succeeds) | completed        | completed        |
++------------------+------------------+------------------+
+| RETRY (all fail) | failed           | failed           |
++------------------+------------------+------------------+
+| SKIP             | skipped          | completed        |
++------------------+------------------+------------------+
+
+**Slot Handler Errors**:
+
++------------------+------------------+------------------+
+| Error Handler    | Routine Status   | JobState Status  |
++==================+==================+==================+
+| None             | (not set)        | completed        |
++------------------+------------------+------------------+
+| STOP             | failed           | failed*          |
++------------------+------------------+------------------+
+| CONTINUE/RETRY/  | (not set)        | completed        |
+| SKIP             |                  |                  |
++------------------+------------------+------------------+
+
+\* JobState status becomes ``"failed"`` only after ``wait_for_completion()`` detects
+  the routine's ``"failed"`` status.
+
+**Key Points**:
+
+* Entry routine errors always trigger error handling strategies
+* Slot handler errors are always caught and logged, but only STOP strategy causes
+  routine state to be marked as ``"failed"``
+* ``wait_for_completion()`` checks routine states (not just execution history) to
+  determine final JobState status
+* Only routine state ``"failed"`` or ``"error"`` causes JobState to be marked as ``"failed"``
+* Routine state ``"error_continued"`` does NOT cause JobState to be marked as ``"failed"``
+
+Example: Routine Exception Handling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
+   from routilux.job_state import JobState
+
+   class DataProcessor(Routine):
+       def __init__(self):
+           super().__init__()
+           self.input_slot = self.define_slot("input", handler=self.process)
+           self.output_event = self.define_event("output", ["result"])
+       
+       def process(self, data=None, **kwargs):
+           if data is None:
+               raise ValueError("Data is required")
+           self.emit("output", result=data * 2)
+
+   flow = Flow()
+   processor = DataProcessor()
+   
+   # Set STOP strategy - slot handler errors will mark routine as failed
+   processor.set_error_handler(ErrorHandler(strategy=ErrorStrategy.STOP))
+   processor_id = flow.add_routine(processor, "processor")
+   
+   # Trigger with invalid data
+   job_state = flow.execute(processor_id, entry_params={"data": None})
+   
+   # Wait for completion to detect the failure
+   JobState.wait_for_completion(flow, job_state, timeout=5.0)
+   
+   # Check routine state
+   routine_state = job_state.get_routine_state("processor")
+   assert routine_state["status"] == "failed"
+   assert job_state.status == "failed"
+
+See :doc:`error_handling` for comprehensive details on error handling strategies,
+status transitions, and error detection mechanisms.
 
 Configuration
 -------------

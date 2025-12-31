@@ -228,7 +228,8 @@ Example with concurrent execution:
    flow.execute(id3, entry_params={"data": "data3"})
    
    # Wait for completion
-   flow.wait_for_completion(timeout=10.0)
+   from routilux.job_state import JobState
+   JobState.wait_for_completion(flow, job_state, timeout=10.0)
    
    # Aggregator will still process when all 3 messages are received
 

@@ -247,8 +247,8 @@ Instead of manually accessing flow and job_state, use ``get_execution_context()`
 **Key Points**:
 
 - ``get_execution_context()`` returns ``ExecutionContext(flow, job_state, routine_id)``
-- Use this method instead of manually accessing thread-local storage
-- Returns ``None`` if not in execution context
+- JobState is accessed via a context variable (thread-safe, set automatically during slot handler execution)
+- Returns ``None`` if not in execution context (no flow or job_state available)
 
 Storing Business Data
 ---------------------
@@ -383,13 +383,14 @@ The ``status`` field tracks the current execution state:
 
 **Status Values**:
 
+- ``"pending"``: Flow created but not yet started (initial state)
 - ``"running"``: Execution is in progress
 - ``"completed"``: Execution completed successfully
 - ``"failed"``: Execution failed (error occurred)
 - ``"paused"``: Execution is paused (can be resumed)
 - ``"cancelled"``: Execution was cancelled
 
-**Status Transitions**:
+**Status Transition Flow**:
 
 .. code-block:: python
    :linenos:
@@ -399,17 +400,82 @@ The ``status`` field tracks the current execution state:
    # Status starts as "running"
    print(f"Initial status: {job_state.status}")  # "running"
 
-   # Wait for completion
-   flow.wait_for_completion(timeout=5.0)
+   # Wait for completion using JobState static method
+   from routilux.job_state import JobState
+   JobState.wait_for_completion(flow, job_state, timeout=5.0)
 
    # Status becomes "completed" or "failed"
    print(f"Final status: {job_state.status}")  # "completed" or "failed"
+
+**Status Transition Table**:
+
++------------------+------------------+------------------+------------------+
+| From Status      | Trigger          | To Status        | Conditions       |
++==================+==================+==================+==================+
+| pending          | flow.execute()   | running          | Execution starts |
++------------------+------------------+------------------+------------------+
+| running          | All tasks done,  | completed        | No critical      |
+|                  | no errors        |                  | failures         |
++------------------+------------------+------------------+------------------+
+| running          | Critical failure | failed           | Routine status   |
+|                  | detected         |                  | is "failed"      |
++------------------+------------------+------------------+------------------+
+| running          | flow.pause()     | paused           | Manual pause     |
++------------------+------------------+------------------+------------------+
+| running          | flow.cancel()    | cancelled        | Manual cancel    |
++------------------+------------------+------------------+------------------+
+| paused           | flow.resume()    | running          | Resume execution |
++------------------+------------------+------------------+------------------+
+
+**Error Detection in wait_for_completion()**:
+
+The ``wait_for_completion()`` method intelligently detects failures by checking
+routine states, not just execution history:
+
+**Detection Logic**:
+
+1. **Checks routine states** for critical failure status:
+   - ``"failed"`` or ``"error"`` → JobState becomes ``"failed"``
+   - ``"error_continued"`` → JobState becomes ``"completed"`` (tolerated error)
+   - ``"skipped"`` → JobState becomes ``"completed"`` (intentionally skipped)
+
+2. **Does NOT check execution history alone**:
+   - Slot handler errors are logged to execution history but are tolerated
+   - Only routine state ``"failed"`` or ``"error"`` indicates critical failure
+
+3. **Distinguishes critical failures from tolerated errors**:
+   - Critical: routine status is ``"failed"`` or ``"error"``
+   - Tolerated: routine status is ``"error_continued"`` (CONTINUE strategy)
+   - Slot errors: only in execution history, routine status not ``"failed"``
+
+**Example: Error Detection**:
+
+.. code-block:: python
+   :linenos:
+
+   from routilux.job_state import JobState
+   
+   job_state = flow.execute(entry_routine_id)
+   
+   # wait_for_completion() will:
+   # 1. Wait for all tasks to complete
+   # 2. Check routine states for "failed" or "error" status
+   # 3. If found, set job_state.status = "failed"
+   # 4. Otherwise, set job_state.status = "completed"
+   completed = JobState.wait_for_completion(flow, job_state, timeout=60.0)
+   
+   if job_state.status == "failed":
+       # Check which routine failed
+       for routine_id, routine_state in job_state.routine_states.items():
+           if routine_state.get("status") == "failed":
+               print(f"Routine {routine_id} failed: {routine_state.get('error')}")
 
 **Key Points**:
 
 - Status is automatically updated during execution
 - Status can be updated in both main thread and worker threads
 - Status changes are thread-safe
+- ``wait_for_completion()`` ensures final status reflects actual execution outcome
 
 Pause, Resume, and Cancel
 -------------------------
@@ -431,8 +497,9 @@ You can control execution using the ``JobState``:
    # Resume execution (returns new JobState for resumed execution)
    resumed_job_state = flow.resume(job_state)
 
-   # Wait for completion
-   flow.wait_for_completion(timeout=5.0)
+   # Wait for completion using JobState static method
+   from routilux.job_state import JobState
+   JobState.wait_for_completion(flow, resumed_job_state, timeout=5.0)
    assert resumed_job_state.status == "completed"
 
    # Cancel execution (if needed)
@@ -531,7 +598,7 @@ Understanding the different threads involved in execution is essential:
    - The thread that calls ``flow.execute()``
    - Usually the main thread or a user-created thread
    - Creates the ``JobState`` object
-   - Sets thread-local storage for the execution
+   - Sets JobState in context variable for entry routine
    - Triggers the entry routine's handler
 
 **Event Loop Thread** (Background Thread):
@@ -544,7 +611,7 @@ Understanding the different threads involved in execution is essential:
    - Threads from the shared ``ThreadPoolExecutor``
    - Execute actual routine handlers
    - May execute tasks from different executions
-   - Access ``JobState`` via thread-local storage
+   - Access ``JobState`` via context variable (set by slot.receive(), thread-safe)
 
 **Example: Thread Identification**:
 
@@ -564,12 +631,11 @@ Understanding the different threads involved in execution is essential:
            thread_name = threading.current_thread().name
            print(f"[{self.name}] Executing in thread: {thread_name}")
            
-           # Access JobState via thread-local storage
-           flow = getattr(self, "_current_flow", None)
-           if flow:
-               job_state = getattr(flow._current_execution_job_state, 'value', None)
-               if job_state:
-                   job_state.record_execution(self._id, "process", {"thread": thread_name})
+           # Access JobState via context variable (thread-safe)
+           from routilux.routine import _current_job_state
+           job_state = _current_job_state.get(None)
+           if job_state:
+               job_state.record_execution(self._id, "process", {"thread": thread_name})
 
    flow = Flow(flow_id="thread_demo", execution_strategy="concurrent", max_workers=2)
    routine = ThreadAwareRoutine("Processor")
@@ -578,7 +644,8 @@ Understanding the different threads involved in execution is essential:
    # Execution thread (MainThread)
    print(f"Execution thread: {threading.current_thread().name}")
    job_state = flow.execute(routine_id)
-   flow.wait_for_completion(timeout=2.0)
+   from routilux.job_state import JobState
+   JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
 **Expected Output**:
 
@@ -590,7 +657,7 @@ Understanding the different threads involved in execution is essential:
 JobState Access Mechanism
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-routilux uses a **hybrid approach** to ensure each task accesses the correct ``JobState``:
+routilux uses **parameter passing** to ensure each task accesses the correct ``JobState``:
 
 **1. Task-Level JobState Passing**:
 
@@ -607,32 +674,43 @@ Each ``SlotActivationTask`` carries its own ``JobState``:
        connection=connection
    )
 
-**2. Thread-Local Storage**:
+**2. Context Variable for Thread-Safe Access**:
 
-Before executing a task, the worker thread sets its thread-local storage:
+routilux uses Python's ``contextvars.ContextVar`` to provide thread-safe access to JobState.
+When a slot handler is executed, the JobState is set in a context variable:
 
 .. code-block:: python
    :linenos:
 
-   def execute_task(task, flow):
-       # Set JobState in thread-local storage for this task
-       if task.job_state:
-           flow._current_execution_job_state.value = task.job_state
+   from routilux.routine import _current_job_state
+   
+   def slot.receive(data, job_state=None, flow=None):
+       # Set JobState in context variable for thread-safe access
+       if job_state is not None:
+           old_job_state = _current_job_state.get(None)
+           _current_job_state.set(job_state)
        
        try:
-           # Handler can now access JobState via thread-local storage
-           task.slot.receive(mapped_data)
+           # Handler can access JobState via context variable
+           # This works even when multiple handlers run concurrently
+           self.handler(data)
        finally:
-           # Clear thread-local storage after execution
-           flow._current_execution_job_state.value = None
+           # Restore previous JobState in context variable
+           if old_job_state is not None:
+               _current_job_state.set(old_job_state)
+           else:
+               _current_job_state.set(None)
 
-**Why Both Mechanisms?**
+**Why Context Variables?**
 
-- **Task-level passing**: Ensures JobState is explicitly available to worker threads
-- **Thread-local storage**: Provides a convenient, unified access interface without
-  modifying function signatures
-- **Automatic isolation**: Each thread has its own thread-local storage, ensuring
-  different executions don't interfere
+- **Thread-safe**: Each execution context has its own context variable value, even when
+  multiple handlers run concurrently in different threads
+- **Nested execution support**: Context variables support nested execution contexts,
+  allowing complex execution patterns
+- **No function signature changes**: Handlers can access JobState via ``get_execution_context()``
+  without modifying function signatures
+- **Automatic isolation**: Each task carries its own JobState, and context variables ensure
+  different executions don't interfere, even when the same routine is executed concurrently
 
 Concurrent Execution Scenarios
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -643,11 +721,13 @@ Concurrent Execution Scenarios
    :linenos:
 
    # Sequential executions in the same thread
+   from routilux.job_state import JobState
+   
    job_state1 = flow.execute(entry_id, entry_params={"task": "A"})
-   flow.wait_for_completion(timeout=2.0)
+   JobState.wait_for_completion(flow, job_state1, timeout=2.0)
    
    job_state2 = flow.execute(entry_id, entry_params={"task": "B"})
-   flow.wait_for_completion(timeout=2.0)
+   JobState.wait_for_completion(flow, job_state2, timeout=2.0)
    
    # Each execution has its own JobState
    assert job_state1.job_id != job_state2.job_id
@@ -661,8 +741,9 @@ Concurrent Execution Scenarios
    import threading
 
    def run_execution(flow, entry_id, task_name):
+       from routilux.job_state import JobState
        job_state = flow.execute(entry_id, entry_params={"task": task_name})
-       flow.wait_for_completion(timeout=3.0)
+       JobState.wait_for_completion(flow, job_state, timeout=3.0)
        return job_state
 
    # Create multiple threads, each running an execution
@@ -710,15 +791,15 @@ This is a critical scenario that demonstrates the robustness of the design:
            self.output_event = self.define_event("output", ["data"])
        
        def send(self, **kwargs):
-           flow = getattr(self, "_current_flow", None)
-           if flow:
-               job_state = getattr(flow._current_execution_job_state, 'value', None)
-               if job_state:
-                   thread_name = threading.current_thread().name
-                   job_state.record_execution(
-                       self._id, "output",
-                       {"data": f"from {self.name}", "thread": thread_name}
-                   )
+           # Access JobState via context variable (thread-safe)
+           from routilux.routine import _current_job_state
+           job_state = _current_job_state.get(None)
+           if job_state:
+               thread_name = threading.current_thread().name
+               job_state.record_execution(
+                   self._id, "output",
+                   {"data": f"from {self.name}", "thread": thread_name}
+               )
            time.sleep(0.1)  # Simulate work
            self.emit("output", data=f"from {self.name}")
 
@@ -729,15 +810,15 @@ This is a critical scenario that demonstrates the robustness of the design:
            self.input_slot = self.define_slot("input", handler=self.process)
        
        def process(self, data=None, **kwargs):
-           flow = getattr(self, "_current_flow", None)
-           if flow:
-               job_state = getattr(flow._current_execution_job_state, 'value', None)
-               if job_state:
-                   thread_name = threading.current_thread().name
-                   job_state.record_execution(
-                       self._id, "input",
-                       {"data": data, "thread": thread_name}
-                   )
+           # Access JobState via context variable (thread-safe)
+           from routilux.routine import _current_job_state
+           job_state = _current_job_state.get(None)
+           if job_state:
+               thread_name = threading.current_thread().name
+               job_state.record_execution(
+                   self._id, "input",
+                   {"data": data, "thread": thread_name}
+               )
 
    flow = Flow(flow_id="isolation_test", execution_strategy="concurrent", max_workers=1)
    
@@ -755,11 +836,13 @@ This is a critical scenario that demonstrates the robustness of the design:
    flow.connect(s2_id, "output", p2_id, "input")
 
    # Execute two executions sequentially (same worker thread will be reused)
+   from routilux.job_state import JobState
+   
    job_state1 = flow.execute(s1_id)
-   flow.wait_for_completion(timeout=2.0)
+   JobState.wait_for_completion(flow, job_state1, timeout=2.0)
    
    job_state2 = flow.execute(s2_id)
-   flow.wait_for_completion(timeout=2.0)
+   JobState.wait_for_completion(flow, job_state2, timeout=2.0)
    
    # Verify isolation: each JobState only contains records from its own execution
    js1_routines = {r.routine_id for r in job_state1.execution_history}
@@ -807,7 +890,10 @@ do they safely update the same ``JobState``?
 - ✅ **``list.append()`` is atomic** in CPython (protected by GIL)
 - ✅ **``dict`` assignment is atomic** in CPython (protected by GIL)
 - ✅ **Multiple worker threads can safely update the same ``JobState``**
+- ✅ **Main thread can safely read ``JobState`` while worker threads update it**
 - ✅ **No data loss or corruption** in concurrent scenarios
+- ✅ **Reads are thread-safe**: You can read ``JobState`` properties (execution_history,
+  routine_states, status, etc.) from the main thread at any time, even during execution
 
 **Verification Test**:
 
@@ -830,8 +916,9 @@ Common Questions and Answers
 **Q1: Does the same worker thread execute tasks from different executions?**
 
 **A**: Yes, worker threads are shared across executions. However, each task carries its
-own ``JobState``, and the thread-local storage is set before each task execution and
-cleared after, ensuring perfect isolation.
+own ``JobState``, and the JobState is set in a context variable before each task execution
+and cleared after, ensuring perfect isolation. Context variables provide thread-safe access
+even when the same routine is executed concurrently in different threads.
 
 **Q2: Can routines from the same execution run in different threads?**
 
@@ -846,34 +933,85 @@ thread pool, but each execution is completely isolated. No interference occurs.
 **Q4: Is it safe to access ``JobState`` from routine handlers?**
 
 **A**: Yes! You can safely access and update ``JobState`` from any routine handler,
-regardless of which thread it runs in. The thread-local storage mechanism ensures
-you always access the correct ``JobState`` for the current execution.
+regardless of which thread it runs in. The context variable mechanism ensures you always
+access the correct ``JobState`` for the current execution, even when multiple handlers run
+concurrently. Use ``get_execution_context()`` for convenient access, or access the context
+variable directly via ``from routilux.routine import _current_job_state``.
+
+**Q5: Can I read JobState from the main thread while execution is running?**
+
+**A**: Yes! You can safely read ``JobState`` from the main thread at any time, even while
+worker threads are updating it. In CPython, all read and write operations are protected by
+the GIL, ensuring thread safety. You might see intermediate states (e.g., execution_history
+growing, status changing from "running" to "completed"), but you won't see corrupted or
+inconsistent data. If you need the final, complete state, wait for completion using
+``JobState.wait_for_completion()``.
 
 Thread Safety Best Practices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**1. Always Wait for Completion**:
+**1. Reading JobState from Main Thread**:
 
-When running concurrent executions, always wait for completion before accessing
-``JobState``:
+You can safely read ``JobState`` from the main thread at any time, even while worker threads
+are updating it. In CPython, all read and write operations are protected by the GIL, ensuring
+thread safety:
 
 .. code-block:: python
    :linenos:
 
+   # Execute flow (non-blocking)
    job_state = flow.execute(entry_id)
-   flow.wait_for_completion(timeout=5.0)  # Wait for all tasks to complete
    
-   # Now safe to access JobState
+   # You can safely read JobState anytime, even during execution
+   print(f"Current status: {job_state.status}")
+   print(f"History so far: {len(job_state.execution_history)} records")
+   
+   # Worker threads are updating job_state concurrently, but reads are safe
+   # You might see intermediate states (e.g., execution_history growing)
+   # But you won't see corrupted or inconsistent data
+   
+   # Wait for completion to see final state
+   from routilux.job_state import JobState
+   JobState.wait_for_completion(flow, job_state, timeout=5.0)
+   
+   # Now you have the final, complete state
+   print(f"Final status: {job_state.status}")
+   print(f"Final history: {len(job_state.execution_history)} records")
+
+**Key Points**:
+
+- ✅ **Reads are thread-safe**: You can read ``JobState`` from the main thread anytime
+- ✅ **No data corruption**: GIL ensures you won't see corrupted or partially written data
+- ✅ **May see intermediate states**: You might see execution_history growing, or status
+  changing from "running" to "completed" - this is normal and safe
+- ✅ **Wait for completion for final state**: If you need the final, complete state, wait
+  for completion before reading
+
+**2. Always Wait for Completion for Final State**:
+
+When you need the final, complete state (not intermediate states), wait for completion:
+
+.. code-block:: python
+   :linenos:
+
+   from routilux.job_state import JobState
+   
+   job_state = flow.execute(entry_id)
+   JobState.wait_for_completion(flow, job_state, timeout=5.0)  # Wait for all tasks to complete
+   
+   # Now safe to access final JobState
    print(f"Status: {job_state.status}")
    print(f"History: {len(job_state.execution_history)} records")
 
-**2. Store JobState for Each Execution**:
+**3. Store JobState for Each Execution**:
 
 If you need to track multiple concurrent executions, store each ``JobState``:
 
 .. code-block:: python
    :linenos:
 
+   from routilux.job_state import JobState
+   
    executions = {}
    for i in range(10):
        job_state = flow.execute(entry_id, entry_params={"task_id": i})
@@ -881,30 +1019,36 @@ If you need to track multiple concurrent executions, store each ``JobState``:
    
    # Wait for all to complete
    for job_state in executions.values():
-       flow.wait_for_completion(timeout=5.0)
+       JobState.wait_for_completion(flow, job_state, timeout=5.0)
    
    # Now you can access each JobState independently
    for task_id, job_state in executions.items():
        print(f"Task {task_id}: {job_state.status}")
 
-**3. Use Thread-Local Storage Correctly**:
+**4. Access JobState from Routine Handlers**:
 
-When accessing ``JobState`` from routine handlers, use the thread-local storage:
+When accessing ``JobState`` from routine handlers, use the context variable or ``get_execution_context()``:
 
 .. code-block:: python
    :linenos:
 
    class MyRoutine(Routine):
        def process(self, **kwargs):
-           flow = getattr(self, "_current_flow", None)
-           if flow:
-               job_state = getattr(flow._current_execution_job_state, 'value', None)
-               if job_state:
-                   # Safe to update JobState
-                   job_state.record_execution(self._id, "process", kwargs)
-                   job_state.update_routine_state(self._id, {"status": "processing"})
+           # Method 1: Use get_execution_context() (recommended)
+           ctx = self.get_execution_context()
+           if ctx:
+               ctx.job_state.record_execution(ctx.routine_id, "process", kwargs)
+               ctx.job_state.update_routine_state(ctx.routine_id, {"status": "processing"})
+           
+           # Method 2: Access context variable directly (thread-safe)
+           from routilux.routine import _current_job_state
+           job_state = _current_job_state.get(None)
+           if job_state:
+               # Safe to update JobState (thread-safe even in concurrent execution)
+               job_state.record_execution(self._id, "process", kwargs)
+               job_state.update_routine_state(self._id, {"status": "processing"})
 
-**4. Understand Thread Pool Sharing**:
+**5. Understand Thread Pool Sharing**:
 
 Remember that all executions share the same thread pool. If you need to limit
 concurrency across all executions, set ``max_workers`` appropriately:
@@ -921,10 +1065,14 @@ concurrency across all executions, set ``max_workers`` appropriately:
 **Key Takeaways**:
 
 - ✅ ``JobState`` updates are thread-safe in CPython
+- ✅ ``JobState`` reads are thread-safe - you can read from main thread anytime
 - ✅ Multiple executions are perfectly isolated
 - ✅ Worker threads are shared, but isolation is maintained via Task-level JobState passing
-- ✅ Thread-local storage provides convenient access without modifying function signatures
-- ✅ Always wait for completion before accessing ``JobState`` in concurrent scenarios
+- ✅ Context variables provide thread-safe access without modifying function signatures
+- ✅ Context variables ensure correct JobState access even when the same routine executes
+  concurrently in different threads
+- ✅ You can safely read ``JobState`` during execution to monitor progress
+- ✅ Wait for completion if you need the final, complete state (not intermediate states)
 
 Best Practices
 --------------

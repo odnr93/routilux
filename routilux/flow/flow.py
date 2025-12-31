@@ -99,10 +99,6 @@ class Flow(Serializable):
         self.flow_id: str = flow_id or str(uuid.uuid4())
         self.routines: Dict[str, "Routine"] = {}
         self.connections: List["Connection"] = []
-        # Internal: Thread-local storage for current execution JobState
-        # This is used during execution to pass JobState to event loop and error handlers
-        # Not part of public API - Flow does not manage execution state
-        self._current_execution_job_state: threading.local = threading.local()
         self._current_flow: Optional["Flow"] = None
         self.execution_tracker: Optional["ExecutionTracker"] = None
         self.error_handler: Optional["ErrorHandler"] = None
@@ -422,15 +418,51 @@ class Flow(Serializable):
 
         return execute_flow(self, entry_routine_id, entry_params, execution_strategy, timeout)
 
-    def wait_for_completion(self, timeout: Optional[float] = None) -> bool:
+    def wait_for_completion(
+        self, timeout: Optional[float] = None, job_state: Optional["JobState"] = None
+    ) -> bool:
         """Wait for all tasks to complete.
+
+        .. deprecated::
+           This method is deprecated. Use ``JobState.wait_for_completion()`` instead
+           for proper error detection and state management.
+
+        For proper completion detection with error checking, use:
+
+        .. code-block:: python
+
+           from routilux.job_state import JobState
+           completed = JobState.wait_for_completion(flow, job_state, timeout=timeout)
 
         Args:
             timeout: Timeout in seconds (infinite wait if None).
+            job_state: Optional JobState object. If provided, will use
+                JobState.wait_for_completion() for proper error detection.
 
         Returns:
             True if all tasks completed before timeout, False otherwise.
         """
+        import warnings
+
+        # If job_state is provided, use the proper method
+        if job_state is not None:
+            warnings.warn(
+                "Flow.wait_for_completion() is deprecated. "
+                "Use JobState.wait_for_completion(flow, job_state, timeout) instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            from routilux.job_state import JobState
+
+            return JobState.wait_for_completion(flow=self, job_state=job_state, timeout=timeout)
+
+        # Legacy behavior: just wait for thread (no error checking)
+        warnings.warn(
+            "Flow.wait_for_completion() without job_state is deprecated and does not check for errors. "
+            "Use JobState.wait_for_completion(flow, job_state, timeout) instead for proper error detection.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if self._execution_thread:
             self._execution_thread.join(timeout=timeout)
             return not self._execution_thread.is_alive()

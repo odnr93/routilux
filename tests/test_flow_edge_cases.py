@@ -122,6 +122,9 @@ class TestFlowExecuteEdgeCases:
 
         # 不设置 flow 上下文
         job_state = flow.execute(routine_id)
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
         assert job_state.status == "completed"
 
     def test_execute_with_resume_error_handling(self):

@@ -231,7 +231,8 @@ In a connected flow, independent routines can execute concurrently:
    flow.execute(f2_id)
    flow.execute(f3_id)
    
-   flow.wait_for_completion(timeout=5.0)
+   from routilux.job_state import JobState
+   JobState.wait_for_completion(flow, job_state, timeout=5.0)
    elapsed = time.time() - start
    print(f"Total time: {elapsed:.2f}s")
    
@@ -316,10 +317,15 @@ When using concurrent execution, ensure thread-safe operations:
        flow.connect(source_id, "output", counter_id, "input")
    
    # Execute all sources concurrently
+   from routilux.job_state import JobState
+   job_states = []
    for source_id in source_ids:
-       flow.execute(source_id)
+       job_state = flow.execute(source_id)
+       job_states.append(job_state)
    
-   flow.wait_for_completion(timeout=5.0)
+   # Wait for all executions to complete
+   for job_state in job_states:
+       JobState.wait_for_completion(flow, job_state, timeout=5.0)
    print(f"Final count: {counter.get_stat('count', 0)}")
    
    flow.shutdown(wait=True)
@@ -436,10 +442,15 @@ Here's a complete example of parallel data processing:
        print("Starting parallel data fetching...")
        start = time.time()
        
+       from routilux.job_state import JobState
+       job_states = []
        for fetcher_id in fetcher_ids:
-           flow.execute(fetcher_id)
+           job_state = flow.execute(fetcher_id)
+           job_states.append(job_state)
        
-       flow.wait_for_completion(timeout=10.0)
+       # Wait for all executions to complete
+       for job_state in job_states:
+       JobState.wait_for_completion(flow, job_state, timeout=10.0)
        elapsed = time.time() - start
        
        print(f"\nCompleted in {elapsed:.2f}s")
@@ -495,8 +506,9 @@ Common Pitfalls
 .. code-block:: python
    :emphasize-lines: 3
 
-   flow.execute(routine_id)
-   flow.wait_for_completion()
+   from routilux.job_state import JobState
+   job_state = flow.execute(routine_id)
+   JobState.wait_for_completion(flow, job_state)
    # Missing shutdown()!
    # Thread pool resources not released
 

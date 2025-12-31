@@ -36,7 +36,7 @@ class TestPauseFlow:
         flow = Flow()
         job_state = JobState(flow.flow_id)
         job_state.status = "running"
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
 
         checkpoint = {"step": 1, "data": "test"}
         pause_flow(flow, job_state, reason="test pause", checkpoint=checkpoint)
@@ -51,7 +51,7 @@ class TestPauseFlow:
         flow = Flow()
         job_state = JobState(flow.flow_id)
         job_state.status = "running"
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
 
         class TestRoutine(Routine):
             def __init__(self):
@@ -130,7 +130,7 @@ class TestResumeFlow:
             "processed": 5,
             "count": 10,
         }
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
 
         resume_flow(flow, job_state)
 
@@ -175,7 +175,7 @@ class TestResumeFlow:
                 "created_at": None,
             }
         ]
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
 
         resume_flow(flow, job_state)
 
@@ -203,7 +203,7 @@ class TestCancelFlow:
         flow = Flow()
         job_state = JobState(flow.flow_id)
         job_state.status = "running"
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
         flow._running = True
 
         cancel_flow(flow, job_state, reason="test cancel")
@@ -220,7 +220,7 @@ class TestTaskSerialization:
         """Test serialize pending tasks with connection."""
         flow = Flow()
         job_state = JobState(flow.flow_id)
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
 
         class SourceRoutine(Routine):
             def __init__(self):
@@ -275,7 +275,7 @@ class TestTaskSerialization:
                 "data": {},
             }
         ]
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
 
         deserialize_pending_tasks(flow, job_state)
 
@@ -304,7 +304,7 @@ class TestTaskSerialization:
                 "data": {},
             }
         ]
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
 
         deserialize_pending_tasks(flow, job_state)
 

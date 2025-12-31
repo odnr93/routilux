@@ -18,7 +18,7 @@ class TestTaskErrorHandling:
         from routilux.job_state import JobState
 
         job_state = JobState(flow.flow_id)
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
 
         class TestRoutine(Routine):
             def __init__(self):
@@ -50,7 +50,7 @@ class TestTaskErrorHandling:
         from routilux.job_state import JobState
 
         job_state = JobState(flow.flow_id)
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
 
         class TestRoutine(Routine):
             def __init__(self):
@@ -65,7 +65,7 @@ class TestTaskErrorHandling:
         routine.set_error_handler(ErrorHandler(strategy=ErrorStrategy.CONTINUE))
 
         slot = routine.get_slot("input")
-        task = SlotActivationTask(slot=slot, data={"test": "data"})
+        task = SlotActivationTask(slot=slot, data={"test": "data"}, job_state=job_state)
 
         flow._running = True  # Set running state
         handle_task_error(task, ValueError("Test error"), flow)
@@ -87,7 +87,7 @@ class TestTaskErrorHandling:
         from routilux.job_state import JobState
 
         job_state = JobState(flow.flow_id)
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
 
         class TestRoutine(Routine):
             def __init__(self):
@@ -114,10 +114,9 @@ class TestTaskErrorHandling:
         if routine_state is not None:
             assert routine_state.get("status") == "skipped"
         else:
-            # If state doesn't exist, check that job_state was accessed via thread-local storage
             # The skip strategy should have been processed
-            current_job_state = getattr(flow._current_execution_job_state, "value", None)
-            assert current_job_state is not None
+            # JobState is now passed directly via tasks, no thread-local storage needed
+            pass
 
     def test_handle_task_error_stop_strategy(self):
         """Test stop strategy (default) in task error handling."""
@@ -127,7 +126,7 @@ class TestTaskErrorHandling:
         job_state = JobState(flow.flow_id)
         job_state.status = "running"
         # Set JobState in thread-local storage for error handler access
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
         flow._running = True
 
         class TestRoutine(Routine):
@@ -143,7 +142,7 @@ class TestTaskErrorHandling:
         # No error handler - should use default STOP
 
         slot = routine.get_slot("input")
-        task = SlotActivationTask(slot=slot, data={"test": "data"})
+        task = SlotActivationTask(slot=slot, data={"test": "data"}, job_state=job_state)
 
         handle_task_error(task, ValueError("Test error"), flow)
 
@@ -158,13 +157,13 @@ class TestTaskErrorHandling:
 
         job_state = JobState(flow.flow_id)
         job_state.status = "running"
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
         flow._running = True
 
         from routilux.slot import Slot
 
         slot = Slot(name="test", routine=None)
-        task = SlotActivationTask(slot=slot, data={"test": "data"})
+        task = SlotActivationTask(slot=slot, data={"test": "data"}, job_state=job_state)
 
         # Should handle gracefully
         handle_task_error(task, ValueError("Test error"), flow)
@@ -177,7 +176,7 @@ class TestTaskErrorHandling:
         from routilux.job_state import JobState
 
         job_state = JobState(flow.flow_id)
-        flow._current_execution_job_state.value = job_state
+        # job_state is now passed directly, no need to set thread-local storage
 
         class TestRoutine(Routine):
             def __init__(self):

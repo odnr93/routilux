@@ -6,6 +6,7 @@
 
 import time
 from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
+from routilux.job_state import JobState
 
 
 class TestErrorHandlerPriority:
@@ -669,6 +670,7 @@ class TestComplexScenarios:
         flow.connect(success_id, "output", critical_id, "input")
 
         job_state = flow.execute(success_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # Success routine应该成功
         success_state = job_state.get_routine_state("success")
@@ -687,8 +689,6 @@ class TestComplexScenarios:
         assert job_state.status == "completed"
 
         # 验证critical routine确实处理了数据（通过检查其processed标志）
-        # 注意：这需要等待flow完成
-        flow.wait_for_completion(timeout=1.0)
         assert critical.processed is True
 
     def test_cascading_failures(self):
@@ -738,6 +738,7 @@ class TestComplexScenarios:
         flow.connect(source_id, "output", critical_id, "input")
 
         job_state = flow.execute(source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # Source应该成功
         source_state = job_state.get_routine_state("source")

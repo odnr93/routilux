@@ -202,12 +202,15 @@ class Event(Serializable):
         # Queue-based execution: create tasks and enqueue
         from routilux.flow.task import SlotActivationTask, TaskPriority
 
+        # Get JobState from kwargs or context variable
+        job_state = kwargs.pop("job_state", None)
+        if job_state is None:
+            from routilux.routine import _current_job_state
+
+            job_state = _current_job_state.get(None)
+
         for slot in self.connected_slots:
             connection = flow._find_connection(self, slot)
-
-            # Get JobState from thread-local storage (if available)
-            # This allows tasks executed in worker threads to access JobState
-            job_state = getattr(flow._current_execution_job_state, "value", None)
 
             # Create task
             task = SlotActivationTask(

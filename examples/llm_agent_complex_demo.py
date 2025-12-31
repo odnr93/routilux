@@ -100,11 +100,13 @@ class ToolExecutor(Routine):
         """Execute the tool if it matches"""
         # Execution state should be stored in JobState, not routine._stats
         # Get execution count from JobState if needed
-        flow = getattr(self, "_current_flow", None)
+        from routilux.routine import _current_job_state
+
+        job_state = _current_job_state.get(None)
         execution_count = 0
-        if flow:
-            job_state = getattr(flow._current_execution_job_state, "value", None)
-            if job_state:
+        if job_state:
+            flow = getattr(self, "_current_flow", None)
+            if flow:
                 routine_id = flow._get_routine_id(self)
                 routine_state = job_state.get_routine_state(routine_id) or {}
                 execution_count = routine_state.get("execution_count", 0) + 1
@@ -171,10 +173,12 @@ class ResultValidator(Routine):
     def validate_result(self, result: Any, tool_name: str, task_id: str, success: bool):
         """Validate tool execution result"""
         # Execution state should be stored in JobState, not routine._stats
-        flow = getattr(self, "_current_flow", None)
-        if flow:
-            job_state = getattr(flow._current_execution_job_state, "value", None)
-            if job_state:
+        from routilux.routine import _current_job_state
+
+        job_state = _current_job_state.get(None)
+        if job_state:
+            flow = getattr(self, "_current_flow", None)
+            if flow:
                 routine_id = flow._get_routine_id(self)
                 routine_state = job_state.get_routine_state(routine_id) or {}
                 validation_count = routine_state.get("validation_count", 0) + 1
@@ -228,11 +232,13 @@ class ResultAggregator(Routine):
     def aggregate_results(self, valid: bool, result: Any, task_id: str, tool_name: str):
         """Aggregate results from multiple tools"""
         # Execution state should be stored in JobState, not routine._stats
-        flow = getattr(self, "_current_flow", None)
+        from routilux.routine import _current_job_state
+
+        job_state = _current_job_state.get(None)
         aggregation_count = 0
-        if flow:
-            job_state = getattr(flow._current_execution_job_state, "value", None)
-            if job_state:
+        if job_state:
+            flow = getattr(self, "_current_flow", None)
+            if flow:
                 routine_id = flow._get_routine_id(self)
                 routine_state = job_state.get_routine_state(routine_id) or {}
                 aggregation_count = routine_state.get("aggregation_count", 0) + 1

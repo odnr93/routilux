@@ -65,7 +65,9 @@ def test_retry_strategy():
     # Execute
     job_state = flow.execute(unreliable_id)
 
-    flow.wait_for_completion(timeout=2.0)
+    from routilux.job_state import JobState
+
+    JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
     print(f"Job Status: {job_state.status}")
     print(f"Call Count: {unreliable.call_count}")

@@ -4,6 +4,7 @@ Flow 测试用例
 
 import pytest
 from routilux import Flow, Routine
+from routilux.job_state import JobState
 
 
 class TestFlowManagement:
@@ -146,6 +147,7 @@ class TestFlowExecution:
 
         # 执行
         job_state = flow.execute(id_a, entry_params={"data": "start"})
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证
         assert job_state.status == "completed"
@@ -198,6 +200,7 @@ class TestFlowExecution:
 
         # 执行
         job_state = flow.execute(id_a)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证两个分支都执行了
         assert job_state.status == "completed"
@@ -252,8 +255,10 @@ class TestFlowExecution:
         flow.connect(id_b, "output", id_c, "input")
 
         # 执行（顺序执行 A 和 B）
-        flow.execute(id_a)
-        flow.execute(id_b)
+        job_state_a = flow.execute(id_a)
+        job_state_b = flow.execute(id_b)
+        JobState.wait_for_completion(flow, job_state_a, timeout=2.0)
+        JobState.wait_for_completion(flow, job_state_b, timeout=2.0)
 
         # 验证 C 收到了输入
         assert len(received_data) >= 1
@@ -285,6 +290,7 @@ class TestFlowExecution:
 
         # 执行
         job_state = flow.execute(routine_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证
         assert job_state.status == "completed"
@@ -320,6 +326,7 @@ class TestFlowErrorHandling:
 
         # 执行应该捕获异常
         job_state = flow.execute(routine_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证错误状态被记录
         assert job_state.status == "failed"

@@ -444,7 +444,8 @@ for distributed execution and recovery.
    resumed_job_state = new_flow.resume(new_job_state)
    
    # Wait for completion
-   new_flow.wait_for_completion(timeout=10.0)
+   from routilux.job_state import JobState
+   JobState.wait_for_completion(new_flow, resumed_job_state, timeout=10.0)
    
    print(f"✅ Host B: Execution resumed and completed")
    print(f"   Final status: {resumed_job_state.status}")

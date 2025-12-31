@@ -50,14 +50,26 @@ def handle_task_error(
         flow: Flow object.
     """
     routine = task.slot.routine
-    routine_id = routine._id if routine else None
+
+    # Find routine_id in flow (this is the correct routine_id, not routine._id)
+    routine_id = None
+    if routine:
+        for rid, r in flow.routines.items():
+            if r is routine:
+                routine_id = rid
+                break
+        # Fallback to routine._id if not found in flow (shouldn't happen in normal cases)
+        if routine_id is None:
+            routine_id = routine._id if hasattr(routine, "_id") else None
 
     error_handler = (
         get_error_handler_for_routine(routine, routine_id, flow) if routine_id and routine else None
     )
 
     if error_handler:
-        should_retry = error_handler.handle_error(error, routine, routine_id, flow)
+        should_retry = error_handler.handle_error(
+            error, routine, routine_id, flow, job_state=task.job_state
+        )
 
         if error_handler.strategy.value == "retry":
             if should_retry:
@@ -81,46 +93,24 @@ def handle_task_error(
             # Max retries reached or non-retryable exception, fall through to default
 
         elif error_handler.strategy.value == "continue":
-            # Errors are tracked in JobState execution history, not routine._stats
-            # Get JobState from task (preferred) or thread-local storage (fallback)
-            job_state = (
-                task.job_state
-                if task.job_state
-                else getattr(flow._current_execution_job_state, "value", None)
-            )
-            if job_state and routine:
-                # Find routine_id in flow
-                routine_id = None
-                for rid, r in flow.routines.items():
-                    if r is routine:
-                        routine_id = rid
-                        break
-                if routine_id:
-                    # Record error in execution history
-                    job_state.record_execution(
-                        routine_id, "error", {"slot": task.slot.name, "error": str(error)}
-                    )
+            if task.job_state and routine_id:
+                # Record error in execution history
+                task.job_state.record_execution(
+                    routine_id, "error", {"slot": task.slot.name, "error": str(error)}
+                )
             return
 
         elif error_handler.strategy.value == "skip":
-            # Get JobState from task (preferred) or thread-local storage (fallback)
-            job_state = (
-                task.job_state
-                if task.job_state
-                else getattr(flow._current_execution_job_state, "value", None)
-            )
-            if job_state:
-                job_state.update_routine_state(routine_id or "", {"status": "skipped"})
+            if task.job_state and routine_id:
+                task.job_state.update_routine_state(routine_id, {"status": "skipped"})
             return
 
-    # Get JobState from task (preferred) or thread-local storage (fallback)
-    job_state = (
-        task.job_state
-        if task.job_state
-        else getattr(flow._current_execution_job_state, "value", None)
-    )
-    if job_state:
-        job_state.status = "failed"
-        job_state.update_routine_state(routine_id or "", {"status": "failed", "error": str(error)})
+    # Update JobState on failure
+    if task.job_state:
+        task.job_state.status = "failed"
+        if routine_id:
+            task.job_state.update_routine_state(
+                routine_id, {"status": "failed", "error": str(error)}
+            )
 
     flow._running = False

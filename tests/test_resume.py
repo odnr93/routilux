@@ -87,6 +87,7 @@ class TestBasicResume:
 
         # 执行完整流程
         job_state = flow.execute(routine_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
         assert job_state.status == "completed"
 
         # 序列化状态
@@ -245,7 +246,10 @@ class TestResumeConsistency:
         job_state2.deserialize(loaded_data)
 
         # 恢复执行
-        flow2.resume(job_state2)
+        resumed_job_state = flow2.resume(job_state2)
+
+        # 等待执行完成
+        JobState.wait_for_completion(flow2, resumed_job_state, timeout=2.0)
 
         # 验证 C 被执行
         assert c.executed is True

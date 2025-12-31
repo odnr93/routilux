@@ -4,6 +4,7 @@ Flow 综合测试用例 - 补充缺失的功能测试
 
 import pytest
 from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
+from routilux.job_state import JobState
 
 
 class TestFlowCancel:
@@ -82,6 +83,7 @@ class TestFlowErrorHandler:
         flow.set_error_handler(error_handler)
 
         job_state = flow.execute(routine_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         assert job_state.status == "failed"
 
@@ -120,6 +122,7 @@ class TestFlowErrorHandler:
         flow.set_error_handler(error_handler)
 
         job_state = flow.execute(id_fail)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # SKIP 策略应该标记为 completed
         assert job_state.status == "completed"
@@ -194,7 +197,7 @@ class TestFlowPauseResume:
         job_state = flow.execute(routine_id)
 
         # 等待初始任务完成
-        flow.wait_for_completion(timeout=2.0)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 暂停 - 此时应该没有待处理任务，所以pause可能不会保存任何任务
         flow.pause(job_state, reason="Test pause")
@@ -206,7 +209,7 @@ class TestFlowPauseResume:
         # 等待任务完成
         import time
 
-        flow.wait_for_completion(timeout=3.0)
+        JobState.wait_for_completion(flow, job_state, timeout=3.0)
         time.sleep(0.2)  # Additional wait for status update
 
         # 验证恢复状态 - resume后如果没有待处理任务，事件循环应该停止
@@ -290,6 +293,7 @@ class TestFlowSerializationEdgeCases:
 
         # 执行以创建 job_state
         job_state = flow.execute(routine_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 序列化（Flow 不再包含执行状态）
         data = flow.serialize()
@@ -392,6 +396,7 @@ class TestFlowComplexScenarios:
 
         # 执行
         job_state = flow.execute(parent_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         assert job_state.status == "completed"
         assert parent.child_routine is not None

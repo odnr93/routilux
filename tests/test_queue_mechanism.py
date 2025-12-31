@@ -11,6 +11,7 @@
 import time
 import threading
 from routilux import Flow, Routine
+from routilux.job_state import JobState
 
 
 class TestNonBlockingEmit:
@@ -57,6 +58,7 @@ class TestNonBlockingEmit:
 
         # 执行
         job_state = flow.execute(source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # emit 应该在 target 处理完成之前就返回
         # 但由于是队列机制，我们需要等待事件循环完成
@@ -99,6 +101,7 @@ class TestNonBlockingEmit:
         flow.connect(source_id, "output", target_id, "input")
 
         job_state = flow.execute(source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         assert job_state.status == "completed"
         # 所有数据都应该被接收
@@ -170,6 +173,7 @@ class TestEventLoop:
         assert not flow._running
 
         job_state = flow.execute(routine_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 执行后事件循环应该已停止（因为任务完成）
         assert job_state.status == "completed"
@@ -205,6 +209,7 @@ class TestEventLoop:
         flow.connect(source_id, "output", target_id, "input")
 
         job_state = flow.execute(source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         assert job_state.status == "completed"
         assert len(processed) == 1
@@ -355,6 +360,7 @@ class TestTaskErrorHandling:
         # 注意：slot 的错误默认是被捕获的，不会导致 flow 失败
         # 错误会被记录到 JobState
         job_state = flow.execute(source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 由于 slot 错误被捕获，flow 应该完成
         assert job_state.status == "completed"

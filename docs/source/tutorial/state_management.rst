@@ -181,8 +181,9 @@ Routines should store execution-specific state in JobState:
    
    flow.connect(source_id, "output", processor_id, "input")
    
+   from routilux.job_state import JobState
    job_state = flow.execute(source_id)
-   flow.wait_for_completion(timeout=2.0)
+   JobState.wait_for_completion(flow, job_state, timeout=2.0)
    
    # Check routine state
    processor_state = job_state.get_routine_state(processor_id)
@@ -284,8 +285,9 @@ JobState provides shared data areas for execution-wide state:
    flow.connect(source_id, "output", collector_id, "input")
    flow.connect(source_id, "output", processor_id, "input")
    
+   from routilux.job_state import JobState
    job_state = flow.execute(source_id)
-   flow.wait_for_completion(timeout=2.0)
+   JobState.wait_for_completion(flow, job_state, timeout=2.0)
    
    # Check shared data
    collected_items = job_state.get_shared_data("collected_items", [])
@@ -359,8 +361,9 @@ Execution history records all routine executions:
    
    flow.connect(source_id, "output", processor_id, "input")
    
+   from routilux.job_state import JobState
    job_state = flow.execute(source_id)
-   flow.wait_for_completion(timeout=2.0)
+   JobState.wait_for_completion(flow, job_state, timeout=2.0)
    
    # Get all execution history
    history = job_state.get_execution_history()
@@ -491,8 +494,9 @@ Here's a complete example combining state management features:
        flow.connect(source_id, "output", validator_id, "input")
        flow.connect(validator_id, "output", agg_id, "input")
        
+       from routilux.job_state import JobState
        job_state = flow.execute(source_id, entry_params={"count": 5})
-       flow.wait_for_completion(timeout=2.0)
+       JobState.wait_for_completion(flow, job_state, timeout=2.0)
        
        print("\n=== Execution State ===")
        source_state = job_state.get_routine_state(source_id)
@@ -568,7 +572,7 @@ Common Pitfalls
    :emphasize-lines: 2
 
    def process(self, **kwargs):
-       job_state = flow._current_execution_job_state.value  # May fail if not in flow context
+       job_state = getattr(self, "_current_job_state", None)  # Set by slot.receive()
 
 **Solution**: Use ``get_execution_context()`` which handles all checks:
 

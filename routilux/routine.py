@@ -6,6 +6,7 @@ Improved Routine mechanism supporting slots (input slots) and events (output eve
 
 from __future__ import annotations
 from typing import Dict, Any, Callable, Optional, List, TYPE_CHECKING, NamedTuple
+from contextvars import ContextVar
 
 if TYPE_CHECKING:
     from routilux.slot import Slot
@@ -15,6 +16,12 @@ if TYPE_CHECKING:
     from routilux.job_state import JobState
 
 from serilux import register_serializable, Serializable
+
+# Context variable for thread-safe job_state access
+# Each execution context has its own value, even in the same thread
+_current_job_state: ContextVar[Optional["JobState"]] = ContextVar(
+    "_current_job_state", default=None
+)
 
 
 class ExecutionContext(NamedTuple):
@@ -127,13 +134,11 @@ class Routine(Serializable):
         self._config: Dict[str, Any] = {}
 
         # Error handler for this routine (optional)
-        # If set, this routine will use its own error handler instead of the flow's default
         # Priority: routine-level error handler > flow-level error handler > default (STOP)
         self._error_handler: Optional["ErrorHandler"] = None
 
         # Register serializable fields
-        # _slots and _events are included - base class will automatically serialize/deserialize them
-        # We only need to restore routine references after deserialization
+        # _slots and _events are included - base class automatically serializes/deserializes them
         self.add_serializable_fields(["_id", "_config", "_error_handler", "_slots", "_events"])
 
     def __repr__(self) -> str:
@@ -339,28 +344,65 @@ class Routine(Serializable):
         if flow is None and hasattr(self, "_current_flow"):
             flow = getattr(self, "_current_flow", None)
 
+        # Get job_state from context variable if not in kwargs
+        # Note: event.emit() will pop job_state from kwargs, so we need to preserve it
+        job_state = kwargs.get("job_state")
+        if job_state is None:
+            job_state = _current_job_state.get(None)
+            if job_state is not None:
+                kwargs["job_state"] = job_state
+
+        # Emit event (this will create tasks and enqueue them)
         event.emit(flow=flow, **kwargs)
 
-        # If flow exists, record execution history
-        # Note: JobState is passed through tasks, so we can't access it directly here
-        # Execution history is recorded when tasks are created in event.emit()
-        # This is handled in the event emission logic
-        if flow is not None:
-            # Use get_execution_context() for convenient access
-            ctx = self.get_execution_context()
-            if ctx is not None:
-                ctx.job_state.record_execution(ctx.routine_id, event_name, kwargs)
+        # Record execution history if we have flow and job_state
+        # Skip during serialization to avoid recursion
+        if flow is not None and job_state is not None and not getattr(flow, "_serializing", False):
+            routine_id = flow._get_routine_id(self)
+            if routine_id:
+                # Create safe data copy for execution history
+                # Remove job_state and convert Serializable objects to strings to avoid recursion
+                safe_data = self._prepare_execution_data(kwargs)
+                job_state.record_execution(routine_id, event_name, safe_data)
 
             # Record to execution tracker
             if flow.execution_tracker is not None:
-                # Find target routine (via connected slots)
-                target_routine_id = None
+                # Get all target routine IDs (there may be multiple connected slots)
+                target_routine_ids = []
                 event_obj = self._events.get(event_name)
                 if event_obj and event_obj.connected_slots:
-                    # Get routine of first connected slot
-                    target_routine_id = event_obj.connected_slots[0].routine._id
+                    for slot in event_obj.connected_slots:
+                        if slot.routine:
+                            target_routine_ids.append(slot.routine._id)
 
+                # Use first target routine ID for tracker (or None if no connections)
+                target_routine_id = target_routine_ids[0] if target_routine_ids else None
                 flow.execution_tracker.record_event(self._id, event_name, target_routine_id, kwargs)
+
+    def _prepare_execution_data(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        """Prepare data for execution history recording.
+
+        Removes job_state and converts Serializable objects to strings
+        to avoid circular references during serialization.
+
+        Args:
+            kwargs: Original keyword arguments from emit().
+
+        Returns:
+            Safe dictionary for execution history recording.
+        """
+        safe_data = {}
+        from serilux import Serializable
+
+        for k, v in kwargs.items():
+            if k == "job_state":
+                continue  # Skip job_state to avoid circular reference
+            # Convert Serializable objects to strings to prevent recursion during serialization
+            if isinstance(v, Serializable):
+                safe_data[k] = str(v)
+            else:
+                safe_data[k] = v
+        return safe_data
 
     def _extract_input_data(self, data: Any = None, **kwargs) -> Any:
         """Extract input data from slot parameters.
@@ -456,8 +498,7 @@ class Routine(Serializable):
             ...         # Execution logic here
             ...         # Store execution state in JobState if needed
         """
-        # Note: In the new architecture, routines should be executed through slot handlers
-        # This method is kept for compatibility but should not be overridden in new code
+        # Deprecated: Kept for compatibility, should not be overridden in new code
         # Execution state should be tracked in JobState, not routine._stats
         pass
 
@@ -658,17 +699,17 @@ class Routine(Serializable):
         if flow is None:
             return None
 
-        # Get job_state from thread-local storage
-        job_state = getattr(flow._current_execution_job_state, "value", None)
+        # Get job_state from context variable (thread-safe)
+        # This method returns None if called outside of execution context
+        job_state = _current_job_state.get(None)
         if job_state is None:
             return None
 
-        # Get routine_id from flow
         routine_id = flow._get_routine_id(self)
         if routine_id is None:
             return None
 
-        return ExecutionContext(flow, job_state, routine_id)
+        return ExecutionContext(flow=flow, job_state=job_state, routine_id=routine_id)
 
     def emit_deferred_event(self, event_name: str, **kwargs) -> None:
         """Emit a deferred event that will be processed when the flow is resumed.

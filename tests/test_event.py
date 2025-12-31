@@ -3,6 +3,7 @@ Event 测试用例
 """
 
 from routilux import Routine
+from routilux.job_state import JobState
 
 
 class TestEventConnection:
@@ -111,7 +112,8 @@ class TestEventEmission:
         flow.connect("r1", "output", "r3", "input2")
 
         # 执行 flow
-        flow.execute("r1")
+        job_state = flow.execute("r1")
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证所有连接的 slots 都收到数据
         assert len(received_data) >= 2
@@ -183,7 +185,8 @@ class TestEventDataFlow:
         flow.connect("r1", "output", "r2", "input")
 
         # 执行 flow
-        flow.execute("r1")
+        job_state = flow.execute("r1")
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证数据正确传递
         assert len(results) >= 1
@@ -230,8 +233,8 @@ class TestEmitAutoFlowDetection:
         flow.connect(source_id, "output", target_id, "input")
 
         # 执行 flow - 这会自动设置 routine._current_flow
-        flow.execute(source_id)
-        flow.wait_for_completion(timeout=2.0)
+        job_state = flow.execute(source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证数据正确传递（说明 flow 自动检测成功）
         assert len(received_data) > 0
@@ -271,8 +274,8 @@ class TestEmitAutoFlowDetection:
 
         flow.connect(source_id, "output", target_id, "input")
 
-        flow.execute(source_id)
-        flow.wait_for_completion(timeout=2.0)
+        job_state = flow.execute(source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证显式传递 flow 仍然工作
         assert len(received_data) > 0
@@ -346,8 +349,8 @@ class TestEmitAutoFlowDetection:
 
         flow.connect(source_id, "output", target_id, "input")
 
-        flow.execute(source_id)
-        flow.wait_for_completion(timeout=2.0)
+        job_state = flow.execute(source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证所有 emit 调用都成功
         assert len(received_data) >= 3
@@ -392,8 +395,8 @@ class TestEmitAutoFlowDetection:
 
         flow.connect(source_id, "output", target_id, "input")
 
-        flow.execute(source_id)
-        flow.wait_for_completion(timeout=2.0)
+        job_state = flow.execute(source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证显式传递的 flow 被使用（数据正确传递说明 flow 被正确使用）
         assert len(received_data) > 0
@@ -438,8 +441,8 @@ class TestEmitAutoFlowDetection:
 
         flow.connect(source_id, "output", target_id, "input")
 
-        flow.execute(source_id)
-        flow.wait_for_completion(timeout=2.0)
+        job_state = flow.execute(source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证嵌套调用中的 emit 也能工作
         assert "trigger_started" in execution_order

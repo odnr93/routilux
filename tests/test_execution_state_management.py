@@ -81,6 +81,9 @@ class TestMultipleIndependentExecutions:
         flow.connect(source_id, "output", processor_id, "input")
 
         job_state = flow.execute(source_id)
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # Verify execution history was recorded
         assert len(job_state.execution_history) >= 2  # At least source and processor
@@ -117,12 +120,15 @@ class TestWorkerThreadJobStateAccess:
 
             def process(self, data=None, **kwargs):
                 # This handler runs in a worker thread
-                flow = getattr(self, "_current_flow", None)
-                if flow:
-                    job_state = getattr(flow._current_execution_job_state, "value", None)
-                    if job_state:
-                        accessed_job_states.append(job_state.job_id)
-                        # Find routine_id from flow
+                # JobState is now accessed via context variable
+                from routilux.routine import _current_job_state
+
+                job_state = _current_job_state.get(None)
+                if job_state:
+                    accessed_job_states.append(job_state.job_id)
+                    # Find routine_id from flow
+                    flow = getattr(self, "_current_flow", None)
+                    if flow:
                         routine_id = None
                         for rid, routine in flow.routines.items():
                             if routine is self:
@@ -143,6 +149,9 @@ class TestWorkerThreadJobStateAccess:
         flow.connect(source_id, "output", processor_id, "input")
 
         job_state = flow.execute(source_id)
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # Verify worker thread accessed JobState
         assert len(accessed_job_states) > 0
@@ -178,12 +187,12 @@ class TestWorkerThreadJobStateAccess:
                 self.input_slot = self.define_slot("input", handler=self.process)
 
             def process(self, data=None, **kwargs):
-                # Access JobState from thread-local storage (set by execute_task)
-                flow = getattr(self, "_current_flow", None)
-                if flow:
-                    job_state = getattr(flow._current_execution_job_state, "value", None)
-                    if job_state:
-                        task_job_states.append(job_state.job_id)
+                # Access JobState from context variable (set by slot.receive)
+                from routilux.routine import _current_job_state
+
+                job_state = _current_job_state.get(None)
+                if job_state:
+                    task_job_states.append(job_state.job_id)
 
         source = Source()
         processor = Processor()
@@ -193,6 +202,9 @@ class TestWorkerThreadJobStateAccess:
         flow.connect(source_id, "output", processor_id, "input")
 
         job_state = flow.execute(source_id)
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # Verify task carried JobState to worker thread
         assert len(task_job_states) > 0
@@ -263,11 +275,11 @@ class TestConcurrentExecutions:
             def send(self, value=None, **kwargs):
                 value = value or kwargs.get("value", "default")
                 # Access JobState and record update
-                flow = getattr(self, "_current_flow", None)
-                if flow:
-                    job_state = getattr(flow._current_execution_job_state, "value", None)
-                    if job_state:
-                        job_state_updates[job_state.job_id] = f"{self.name}:{value}"
+                from routilux.routine import _current_job_state
+
+                job_state = _current_job_state.get(None)
+                if job_state:
+                    job_state_updates[job_state.job_id] = f"{self.name}:{value}"
                 self.emit("output", data=f"{self.name}:{value}")
 
         source1 = Source("Source1")
@@ -277,6 +289,7 @@ class TestConcurrentExecutions:
 
         def run_execution(entry_id, value):
             job_state = flow.execute(entry_id, entry_params={"value": value})
+            JobState.wait_for_completion(flow, job_state, timeout=2.0)
             return job_state
 
         # Run concurrent executions
@@ -329,6 +342,9 @@ class TestErrorHandlingWithJobState:
         flow.set_error_handler(error_handler)
 
         job_state = flow.execute(source_id)
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # Verify error was handled and JobState was updated
         # (CONTINUE strategy should allow execution to complete)
@@ -362,6 +378,9 @@ class TestExecutionHistoryRecording:
         source_id = flow.add_routine(source, "source")
 
         job_state = flow.execute(source_id)
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # Verify execution history was recorded
         assert len(job_state.execution_history) > 0
@@ -401,6 +420,9 @@ class TestExecutionHistoryRecording:
         flow.connect(source_id, "output", processor_id, "input")
 
         job_state = flow.execute(source_id)
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # Verify execution history was recorded for both routines
         assert len(job_state.execution_history) >= 2
@@ -475,11 +497,14 @@ class TestPauseResumeWithJobState:
         flow.pause(js1, reason="pause js1")
 
         assert js1.status == "paused"
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow, js2, timeout=2.0)
         assert js2.status == "completed"  # js2 should not be affected
 
         # Resume js1
         resumed = flow.resume(js1)
-        flow.wait_for_completion(timeout=2.0)
+        JobState.wait_for_completion(flow, resumed, timeout=2.0)
 
         # Status may be updated in resumed JobState
         assert resumed.status in ["completed", "running"]
@@ -602,10 +627,12 @@ class TestComplexScenarios:
 
         # Execute failing one
         js1 = flow.execute(failing_id)
+        JobState.wait_for_completion(flow, js1, timeout=2.0)
         assert js1.status == "failed"
 
         # Execute successful one
         js2 = flow.execute(success_id)
+        JobState.wait_for_completion(flow, js2, timeout=2.0)
         assert js2.status == "completed"
 
         # Verify they are independent

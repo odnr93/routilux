@@ -169,7 +169,7 @@ class Slot(Serializable):
             if self in event.connected_slots:
                 event.connected_slots.remove(self)
 
-    def receive(self, data: Dict[str, Any]) -> None:
+    def receive(self, data: Dict[str, Any], job_state=None, flow=None) -> None:
         """Receive data, merge with existing data, and call handler.
 
         This method is called automatically when a connected event is emitted.
@@ -211,61 +211,85 @@ class Slot(Serializable):
         # This updates self._data and returns the merged result
         merged_data = self._merge_data(data)
 
-        # Call handler with merged data if handler is defined
-        if self.handler is not None:
-            try:
-                import inspect
+        # Set job_state in context variable for thread-safe access
+        # ContextVar ensures each execution context has its own value
+        from routilux.routine import _current_job_state
 
-                sig = inspect.signature(self.handler)
-                params = list(sig.parameters.keys())
+        old_job_state = None
+        if job_state is not None:
+            old_job_state = _current_job_state.get(None)
+            _current_job_state.set(job_state)
 
-                # If handler accepts **kwargs, pass all data directly
-                if self._is_kwargs_handler(self.handler):
-                    self.handler(**merged_data)
-                elif len(params) == 1 and params[0] == "data":
-                    # Handler only accepts one 'data' parameter, pass entire dictionary
-                    self.handler(merged_data)
-                elif len(params) == 1:
-                    # Handler only accepts one parameter, try to pass matching value
-                    param_name = params[0]
-                    if param_name in merged_data:
-                        self.handler(merged_data[param_name])
-                    else:
-                        # If no matching parameter, pass entire dictionary
+        try:
+            # Call handler with merged data if handler is defined
+            if self.handler is not None:
+                try:
+                    import inspect
+
+                    sig = inspect.signature(self.handler)
+                    params = list(sig.parameters.keys())
+
+                    # If handler accepts **kwargs, pass all data directly
+                    if self._is_kwargs_handler(self.handler):
+                        self.handler(**merged_data)
+                    elif len(params) == 1 and params[0] == "data":
+                        # Handler only accepts one 'data' parameter, pass entire dictionary
                         self.handler(merged_data)
-                else:
-                    # Multiple parameters, try to match
-                    matched_params = {}
-                    for param_name in params:
+                    elif len(params) == 1:
+                        # Handler only accepts one parameter, try to pass matching value
+                        param_name = params[0]
                         if param_name in merged_data:
-                            matched_params[param_name] = merged_data[param_name]
-
-                    if matched_params:
-                        self.handler(**matched_params)
+                            self.handler(merged_data[param_name])
+                        else:
+                            # If no matching parameter, pass entire dictionary
+                            self.handler(merged_data)
                     else:
-                        # If no match, pass entire dictionary as first parameter
-                        self.handler(merged_data)
-            except Exception as e:
-                # Record exception but don't interrupt flow
-                import logging
+                        # Multiple parameters, try to match
+                        matched_params = {}
+                        for param_name in params:
+                            if param_name in merged_data:
+                                matched_params[param_name] = merged_data[param_name]
 
-                logging.exception(f"Error in slot {self} handler: {e}")
-                # Errors are tracked in JobState execution history, not routine._stats
-                # Try to get flow and job_state to record error
-                flow = getattr(self.routine, "_current_flow", None)
-                if flow:
-                    job_state = getattr(flow._current_execution_job_state, "value", None)
-                    if job_state:
-                        # Find routine_id in flow
-                        routine_id = None
-                        for rid, r in flow.routines.items():
-                            if r is self.routine:
-                                routine_id = rid
-                                break
-                        if routine_id:
-                            job_state.record_execution(
-                                routine_id, "error", {"slot": self.name, "error": str(e)}
-                            )
+                        if matched_params:
+                            self.handler(**matched_params)
+                        else:
+                            # If no match, pass entire dictionary as first parameter
+                            self.handler(merged_data)
+                except Exception as e:
+                    # Record exception but don't interrupt flow
+                    import logging
+
+                    logging.exception(f"Error in slot {self} handler: {e}")
+                    # Errors are tracked in JobState execution history, not routine._stats
+                    if job_state and self.routine:
+                        # Try to get flow from parameter, then from routine
+                        if flow is None:
+                            flow = getattr(self.routine, "_current_flow", None)
+                        if flow:
+                            # Find routine_id in flow using flow._get_routine_id()
+                            routine_id = flow._get_routine_id(self.routine)
+                            if routine_id:
+                                job_state.record_execution(
+                                    routine_id, "error", {"slot": self.name, "error": str(e)}
+                                )
+
+                                # If routine has error handler with STOP strategy, mark as failed immediately
+                                # For RETRY strategy, we can't accurately determine if all retries are exhausted here,
+                                # so we rely on wait_for_completion to detect errors in execution history
+                                error_handler = self.routine.get_error_handler()
+                                if error_handler and error_handler.strategy.value == "stop":
+                                    # STOP strategy: mark routine as failed immediately
+                                    job_state.update_routine_state(
+                                        routine_id, {"status": "failed", "error": str(e)}
+                                    )
+        finally:
+            # Restore previous job_state in context variable
+            from routilux.routine import _current_job_state
+
+            if old_job_state is not None:
+                _current_job_state.set(old_job_state)
+            else:
+                _current_job_state.set(None)
 
     def _merge_data(self, new_data: Dict[str, Any]) -> Dict[str, Any]:
         """Merge new data into existing data according to merge_strategy.
@@ -445,17 +469,13 @@ class Slot(Serializable):
 
                     logging.exception(f"Error in slot {self} handler: {e}")
                     # Errors are tracked in JobState execution history, not routine._stats
-                    # Try to get flow and job_state to record error
-                    flow = getattr(self.routine, "_current_flow", None)
-                    if flow:
-                        job_state = getattr(flow._current_execution_job_state, "value", None)
-                        if job_state:
-                            # Find routine_id in flow
-                            routine_id = None
-                            for rid, r in flow.routines.items():
-                                if r is self.routine:
-                                    routine_id = rid
-                                    break
+                    if job_state and self.routine:
+                        # Try to get flow from parameter, then from routine
+                        if flow is None:
+                            flow = getattr(self.routine, "_current_flow", None)
+                        if flow:
+                            # Find routine_id in flow using flow._get_routine_id()
+                            routine_id = flow._get_routine_id(self.routine)
                             if routine_id:
                                 job_state.record_execution(
                                     routine_id, "error", {"slot": self.name, "error": str(e)}

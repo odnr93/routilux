@@ -328,9 +328,11 @@ def test_concurrent_execution():
 
     # Wait for all concurrent tasks to complete
     # In concurrent mode, tasks run asynchronously, so we need to wait
-    # Using Flow.wait_for_completion() is the proper way to wait
+    # Using JobState.wait_for_completion() is the proper way to wait
+    from routilux.job_state import JobState
+
     if flow.execution_strategy == "concurrent":
-        flow.wait_for_completion(timeout=2.0)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
     # Check results
     formatter = flow.routines["formatter"]
@@ -364,8 +366,12 @@ def test_sequential_vs_concurrent():
         execution_time = time.time() - start_time
 
         # Wait for completion (concurrent tasks run asynchronously)
+        from routilux.job_state import JobState
+
         if strategy == "concurrent":
-            flow.wait_for_completion(timeout=2.0)  # Elegant way to wait for concurrent tasks
+            JobState.wait_for_completion(
+                flow, job_state, timeout=2.0
+            )  # Elegant way to wait for concurrent tasks
 
         results[strategy] = execution_time
         print(f"Execution Time: {execution_time:.3f} seconds")
@@ -416,8 +422,10 @@ def test_concurrent_with_error_handling():
     execution_time = time.time() - start_time
 
     # Wait for concurrent tasks to complete
+    from routilux.job_state import JobState
+
     if flow.execution_strategy == "concurrent":
-        flow.wait_for_completion(timeout=2.0)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
     print(f"Execution Time: {execution_time:.3f} seconds")
     print(f"Job Status: {job_state.status}")
@@ -514,15 +522,16 @@ def main():
 
         # Best Practice: Properly manage Flow lifecycle
         # In production code, you should:
-        # 1. Call flow.wait_for_completion() after execution to wait for all tasks
+        # 1. Call JobState.wait_for_completion() after execution to wait for all tasks
         # 2. Call flow.shutdown() when done to clean up resources
         # 3. Use context managers or try/finally blocks to ensure cleanup
         #
         # Example:
+        #   from routilux.job_state import JobState
         #   flow = Flow(execution_strategy="concurrent")
         #   try:
         #       job_state = flow.execute(...)
-        #       flow.wait_for_completion(timeout=10.0)
+        #       JobState.wait_for_completion(flow, job_state, timeout=10.0)
         #   finally:
         #       flow.shutdown(wait=True)
         #

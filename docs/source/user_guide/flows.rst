@@ -199,7 +199,7 @@ special. However, for advanced use cases, you can use the completion detection A
 
 .. code-block:: python
 
-   from routilux.flow.completion import wait_for_execution_completion
+   from routilux.job_state import JobState
    
    job_state = flow.execute(entry_routine_id="routine1")
    
@@ -207,7 +207,7 @@ special. However, for advanced use cases, you can use the completion detection A
    def progress_callback(queue_size, active_count, status):
        print(f"Queue: {queue_size}, Active: {active_count}, Status: {status}")
    
-   completed = wait_for_execution_completion(
+   completed = JobState.wait_for_completion(
        flow=flow,
        job_state=job_state,
        timeout=300.0,
@@ -453,11 +453,12 @@ wait for completion when needed:
    
    # emit() has returned, but handlers may still be running
    # Wait for all handlers to complete
-   flow.wait_for_completion(timeout=10.0)
+   from routilux.job_state import JobState
+   JobState.wait_for_completion(flow, job_state, timeout=10.0)
    
    # Now all handlers are guaranteed to be finished
 
-**How ``wait_for_completion()`` Works**:
+**How ``JobState.wait_for_completion()`` Works**:
 
 1. Waits for the event loop thread to finish
 2. Checks that all active tasks are complete
@@ -465,19 +466,19 @@ wait for completion when needed:
 
 **Note**: The ``execute()`` method automatically uses a systematic completion detection
 mechanism that waits for all tasks to complete. For most use cases, you don't need to
-call ``wait_for_completion()`` manually. However, for concurrent execution or when you
+call ``JobState.wait_for_completion()`` manually. However, for concurrent execution or when you
 need explicit control, you can use it.
 
 **Best Practice**:
 
-For concurrent execution, always call ``wait_for_completion()`` before accessing results or shutting down:
+For concurrent execution, always call ``JobState.wait_for_completion()`` before accessing results or shutting down:
 
 .. code-block:: python
 
    flow = Flow(execution_strategy="concurrent")
    try:
        job_state = flow.execute("entry_routine")
-       flow.wait_for_completion(timeout=10.0)
+       JobState.wait_for_completion(flow, job_state, timeout=10.0)
        # Now safe to access results
    finally:
        flow.shutdown(wait=True)
@@ -493,7 +494,7 @@ When you're done with a flow, properly shut it down to clean up resources:
    
    try:
        job_state = flow.execute("entry_routine")
-       flow.wait_for_completion(timeout=10.0)
+       JobState.wait_for_completion(flow, job_state, timeout=10.0)
    finally:
        # Always shut down to clean up the thread pool
        flow.shutdown(wait=True)
@@ -617,8 +618,9 @@ Best Practices
 
    .. code-block:: python
 
-      flow.execute("entry")
-      flow.wait_for_completion(timeout=10.0)
+      from routilux.job_state import JobState
+      job_state = flow.execute("entry")
+      JobState.wait_for_completion(flow, job_state, timeout=10.0)
 
 2. **Always shut down** flows when done:
 

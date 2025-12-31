@@ -49,41 +49,16 @@ def event_loop(flow: "Flow") -> None:
             try:
                 task = flow._task_queue.get(timeout=0.1)
             except queue.Empty:
-                # Check if all tasks are complete using systematic verification
-                # This avoids race conditions where tasks are enqueued between checks
-                from routilux.flow.completion import ExecutionCompletionChecker
+                # Check if all tasks are complete
+                # Since tasks carry JobState, we check completion by examining active tasks
+                # If queue is empty and no active tasks, execution is complete
+                queue_empty = flow._task_queue.empty()
+                with flow._execution_lock:
+                    active_tasks = [f for f in flow._active_tasks if not f.done()]
+                    active_count = len(active_tasks)
 
-                job_state = getattr(flow._current_execution_job_state, "value", None)
-                if job_state is None:
-                    # No job state available, continue waiting
-                    continue
-
-                # Use systematic completion checker
-                # For test environments, use faster checks
-                import os
-
-                is_test_env = os.getenv("PYTEST_CURRENT_TEST") is not None
-                if is_test_env:
-                    stability_checks = 2
-                    check_interval = 0.01
-                    stability_delay = 0.005
-                else:
-                    stability_checks = 3
-                    check_interval = 0.05
-                    stability_delay = 0.02
-
-                checker = ExecutionCompletionChecker(
-                    flow=flow,
-                    job_state=job_state,
-                    stability_checks=stability_checks,
-                    check_interval=check_interval,
-                    stability_delay=stability_delay,
-                )
-
-                if checker.check_with_stability():
-                    # Update JobState if still running
-                    if job_state.status == "running":
-                        job_state.status = "completed"
+                if queue_empty and active_count == 0:
+                    # All tasks completed, break event loop
                     break
                 continue
 
@@ -117,7 +92,6 @@ def event_loop(flow: "Flow") -> None:
 
         except Exception as e:
             logging.exception(f"Error in event loop: {e}")
-            # Continue loop even on error to prevent silent failures
 
 
 def execute_task(task: "SlotActivationTask", flow: "Flow") -> None:
@@ -127,28 +101,22 @@ def execute_task(task: "SlotActivationTask", flow: "Flow") -> None:
         task: SlotActivationTask to execute.
         flow: Flow object.
     """
-    # Set JobState in thread-local storage for this task execution
-    # This allows handlers and error handlers to access JobState even in worker threads
-    if task.job_state:
-        flow._current_execution_job_state.value = task.job_state
-
     try:
         if task.connection:
             mapped_data = task.connection._apply_mapping(task.data)
         else:
             mapped_data = task.data
 
-        task.slot.receive(mapped_data)
+        # Set routine._current_flow for slot.receive() to find routine_id
+        if task.slot.routine:
+            task.slot.routine._current_flow = flow
+
+        task.slot.receive(mapped_data, job_state=task.job_state, flow=flow)
 
     except Exception as e:
         from routilux.flow.error_handling import handle_task_error
 
         handle_task_error(task, e, flow)
-    finally:
-        # Clear thread-local storage after task execution
-        # This ensures that if the same worker thread executes a task from a different
-        # execution, it won't accidentally access the previous execution's JobState
-        flow._current_execution_job_state.value = None
 
 
 def enqueue_task(task: "SlotActivationTask", flow: "Flow") -> None:

@@ -6,6 +6,7 @@ Event 综合测试用例
 
 import threading
 from routilux import Flow, Routine, Event, Slot, ErrorHandler, ErrorStrategy
+from routilux.job_state import JobState
 
 
 class TestEventConcurrentEmit:
@@ -46,7 +47,7 @@ class TestEventConcurrentEmit:
         job_state = flow.execute(source_id)
 
         # 等待所有并发任务完成
-        flow.wait_for_completion(timeout=2.0)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证错误被记录到JobState
         failing_id = failing_id
@@ -91,6 +92,7 @@ class TestEventConcurrentEmit:
         source.output_event.connect(target.input_slot)
 
         job_state = flow.execute(source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
         assert len(results) == 1
         assert job_state.status == "completed"
 
@@ -159,6 +161,7 @@ class TestEventEdgeCases:
 
         # 执行
         job_state = flow.execute(source_id)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
         # 错误应该被记录，但不会中断流程（因为使用了 CONTINUE 策略）
         # 验证 job_state 状态或错误被记录
         assert job_state.status in ["completed", "failed"]

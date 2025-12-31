@@ -98,6 +98,11 @@ def main():
     print("Executing flow...")
     job_state = flow.execute(source_id, entry_params={"data": "Hello, World!"})
 
+    # Wait for execution to complete
+    from routilux.job_state import JobState
+
+    JobState.wait_for_completion(flow, job_state, timeout=2.0)
+
     # Check results
     print(f"\nExecution Status: {job_state.status}")
     print(f"Final Result: {sink.final_result}")

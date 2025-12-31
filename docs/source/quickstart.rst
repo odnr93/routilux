@@ -90,8 +90,12 @@ Execute the flow with entry parameters:
 
 .. code-block:: python
 
-   # Execute the flow (automatically waits for completion)
+   # Execute the flow (non-blocking, returns immediately)
+   from routilux.job_state import JobState
    job_state = flow.execute(id1, entry_params={"data": "test"})
+   
+   # Wait for completion
+   JobState.wait_for_completion(flow, job_state, timeout=2.0)
    
    # Check the status
    print(job_state.status)  # "completed"
@@ -228,7 +232,8 @@ For I/O-bound operations, use concurrent execution to run multiple routines in p
        job_state = flow.execute(entry_routine_id, entry_params={"data": "test"})
        
        # Wait for all concurrent tasks to complete
-       flow.wait_for_completion(timeout=10.0)
+       from routilux.job_state import JobState
+       JobState.wait_for_completion(flow, job_state, timeout=10.0)
    finally:
        # Always clean up resources
        flow.shutdown(wait=True)

@@ -208,8 +208,7 @@ def resume_flow(flow: "Flow", job_state: "JobState") -> "JobState":
     job_state._set_running()
     flow._paused = False
 
-    # Store JobState in thread-local storage for access during execution
-    flow._current_execution_job_state.value = job_state
+    # JobState is now passed directly via tasks, no need for thread-local storage
 
     for routine_id, routine_state in job_state.routine_states.items():
         if routine_id in flow.routines:
@@ -288,11 +287,9 @@ def cancel_flow(flow: "Flow", job_state: "JobState", reason: str = "") -> None:
     job_state._set_cancelled(reason=reason)
     flow._paused = False
 
-    # Stop event loop if cancelling current execution
-    current_job_state = getattr(flow._current_execution_job_state, "value", None)
-    if job_state == current_job_state:
-        flow._running = False
-        with flow._execution_lock:
-            for future in flow._active_tasks.copy():
-                future.cancel()
+    # Stop event loop
+    flow._running = False
+    with flow._execution_lock:
+        for future in flow._active_tasks.copy():
+            future.cancel()
             flow._active_tasks.clear()

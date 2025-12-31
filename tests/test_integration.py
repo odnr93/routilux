@@ -3,6 +3,7 @@
 """
 
 from routilux import Flow, Routine
+from routilux.job_state import JobState
 
 
 class TestCompleteFlow:
@@ -79,7 +80,7 @@ class TestCompleteFlow:
 
         # 执行
         job_state = flow.execute(id1, entry_params={"input_data": "test"})
-        flow.wait_for_completion(timeout=2.0)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证
         assert job_state.status == "completed"
@@ -137,7 +138,7 @@ class TestCompleteFlow:
 
         # 测试成功路径
         job_state = flow.execute(id_proc, entry_params={"should_fail": False})
-        flow.wait_for_completion(timeout=2.0)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
         assert job_state.status == "completed"
         assert len(success_results) > 0
 
@@ -197,10 +198,10 @@ class TestCompleteFlow:
         flow.connect(source_id, "output", id_agg, "input")
 
         # 执行单个源，它会发出多个消息
-        flow.execute(source_id)
+        job_state = flow.execute(source_id)
 
         # 等待所有任务完成
-        flow.wait_for_completion(timeout=2.0)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证聚合器收到了数据
         assert len(aggregated_data) >= 3
@@ -272,7 +273,7 @@ class TestComplexScenarios:
 
         # 执行
         job_state = flow.execute(id_a)
-        flow.wait_for_completion(timeout=2.0)
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # 验证
         assert job_state.status == "completed"
