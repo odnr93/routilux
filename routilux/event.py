@@ -205,6 +205,10 @@ class Event(Serializable):
         for slot in self.connected_slots:
             connection = flow._find_connection(self, slot)
 
+            # Get JobState from thread-local storage (if available)
+            # This allows tasks executed in worker threads to access JobState
+            job_state = getattr(flow._current_execution_job_state, "value", None)
+
             # Create task
             task = SlotActivationTask(
                 slot=slot,
@@ -212,6 +216,7 @@ class Event(Serializable):
                 connection=connection,
                 priority=TaskPriority.NORMAL,
                 created_at=datetime.now(),
+                job_state=job_state,  # Pass JobState to task
             )
 
             # Enqueue (non-blocking)

@@ -11,10 +11,14 @@ class TestFlowCancel:
 
     def test_cancel_without_job_state(self):
         """测试在没有 job_state 时取消应该报错"""
-        flow = Flow()
+        from routilux import JobState
 
-        with pytest.raises(ValueError, match="No active job_state"):
-            flow.cancel(reason="Test cancel")
+        flow = Flow()
+        # Create a JobState with wrong flow_id to test validation
+        wrong_job_state = JobState(flow_id="wrong_flow_id")
+
+        with pytest.raises(ValueError, match="does not match"):
+            flow.cancel(wrong_job_state, reason="Test cancel")
 
     def test_cancel_active_job(self):
         """测试取消正在执行的 job"""
@@ -38,7 +42,7 @@ class TestFlowCancel:
         job_state = flow.execute(routine_id)
 
         # 取消
-        flow.cancel(reason="User cancelled")
+        flow.cancel(job_state, reason="User cancelled")
 
         # 验证取消状态
         assert job_state.status == "cancelled"
@@ -128,10 +132,14 @@ class TestFlowPauseResume:
 
     def test_pause_without_job_state(self):
         """测试在没有 job_state 时暂停应该报错"""
-        flow = Flow()
+        from routilux import JobState
 
-        with pytest.raises(ValueError, match="No active job_state"):
-            flow.pause(reason="Test pause")
+        flow = Flow()
+        # Create a JobState with wrong flow_id to test validation
+        wrong_job_state = JobState(flow_id="wrong_flow_id")
+
+        with pytest.raises(ValueError, match="does not match"):
+            flow.pause(wrong_job_state, reason="Test pause")
 
     def test_pause_with_checkpoint(self):
         """测试带检查点的暂停"""
@@ -153,7 +161,7 @@ class TestFlowPauseResume:
 
         # 暂停并设置检查点
         checkpoint = {"step": 1, "data": "checkpoint_data"}
-        flow.pause(reason="Test pause with checkpoint", checkpoint=checkpoint)
+        flow.pause(job_state, reason="Test pause with checkpoint", checkpoint=checkpoint)
 
         # 验证暂停状态
         assert job_state.status == "paused"
@@ -189,11 +197,11 @@ class TestFlowPauseResume:
         flow.wait_for_completion(timeout=2.0)
 
         # 暂停 - 此时应该没有待处理任务，所以pause可能不会保存任何任务
-        flow.pause(reason="Test pause")
+        flow.pause(job_state, reason="Test pause")
         assert job_state.status == "paused"
 
         # 恢复
-        resumed_job_state = flow.resume(job_state)
+        flow.resume(job_state)
 
         # 等待任务完成
         import time
@@ -281,14 +289,17 @@ class TestFlowSerializationEdgeCases:
         routine_id = flow.add_routine(routine, "test")
 
         # 执行以创建 job_state
-        flow.execute(routine_id)
+        job_state = flow.execute(routine_id)
 
-        # 序列化
+        # 序列化（Flow 不再包含执行状态）
         data = flow.serialize()
+        assert "job_state" not in data, "Flow 序列化不应包含执行状态"
 
-        assert "job_state" in data
-        assert data["job_state"]["flow_id"] == "test_flow"
-        assert data["job_state"]["status"] == "completed"
+        # JobState 需要单独序列化
+        job_state_data = job_state.serialize()
+        assert "job_id" in job_state_data
+        assert job_state_data["flow_id"] == "test_flow"
+        assert job_state_data["status"] == "completed"
 
     def test_deserialize_flow_with_missing_routines(self):
         """测试反序列化缺少 routines 的 Flow"""

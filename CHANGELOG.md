@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.0] - 2025-01-XX
 
-### 🚀 Major Architecture Overhaul: Event Queue Pattern
+### 🚀 Major Architecture Overhaul: Event Queue Pattern + Complete Flow/JobState Decoupling
 
-This is a **major version update** with significant architectural changes. The core execution model has been completely redesigned to use an event queue pattern, providing better performance, fairness, and unified execution logic.
+This is a **major version update** with significant architectural changes. The core execution model has been completely redesigned to use an event queue pattern, and Flow and JobState are now completely decoupled.
 
 ### Changed
 
@@ -20,6 +20,17 @@ This is a **major version update** with significant architectural changes. The c
   - Both sequential and concurrent modes use the **same unified queue mechanism**
   - Execution order is now **fair scheduling** (queue order) instead of depth-first
   - Each `Flow.execute()` call is an **independent execution** - slot data is NOT shared between executions
+
+- **Complete Flow/JobState Decoupling**: Flow and JobState are now completely separated
+  - **Removed**: `flow.job_state` field - Flow no longer manages execution state
+  - **Removed**: `flow._active_executions` - Flow does not track executions
+  - **Removed**: `flow.get_execution()`, `flow.get_all_executions()`, etc. - Flow doesn't manage executions
+  - **Changed**: `flow.pause()`, `flow.resume()`, `flow.cancel()` now require `JobState` as first argument
+  - **Changed**: `flow.serialize()` no longer includes execution state (removed `include_execution_state` parameter)
+  - **Added**: Thread-local storage for passing JobState during execution (internal mechanism)
+  - **Added**: Task-level JobState passing for worker thread access
+  - **Impact**: Each `execute()` returns a JobState that you must manage - Flow doesn't store it
+  - **Benefit**: Proper separation of concerns, multiple independent executions, better serialization model
 
 - **Automatic Flow Detection**: `emit()` now automatically detects flow from routine context
   - No need to manually pass `flow` parameter in most cases
@@ -103,9 +114,9 @@ This is a **major version update** with significant architectural changes. The c
   - Better documentation of execution model
 
 - **Defensive Programming**:
-  - Warning when starting new execution while previous is running
   - Clear documentation about independent executions
   - Examples showing correct aggregation patterns
+  - Multiple independent executions are now explicitly supported
 
 ### Fixed
 

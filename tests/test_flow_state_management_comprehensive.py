@@ -22,20 +22,24 @@ class TestPauseFlow:
 
     def test_pause_without_job_state(self):
         """Test pause without job_state raises error."""
-        flow = Flow()
+        from routilux import JobState
 
-        with pytest.raises(ValueError, match="No active job_state"):
-            pause_flow(flow, reason="test")
+        flow = Flow()
+        # Create a JobState with wrong flow_id to test validation
+        wrong_job_state = JobState(flow_id="wrong_flow_id")
+
+        with pytest.raises(ValueError, match="does not match"):
+            pause_flow(flow, wrong_job_state, reason="test")
 
     def test_pause_with_checkpoint(self):
         """Test pause with checkpoint data."""
         flow = Flow()
         job_state = JobState(flow.flow_id)
         job_state.status = "running"
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
 
         checkpoint = {"step": 1, "data": "test"}
-        pause_flow(flow, reason="test pause", checkpoint=checkpoint)
+        pause_flow(flow, job_state, reason="test pause", checkpoint=checkpoint)
 
         assert flow._paused is True
         assert job_state.status == "paused"
@@ -47,7 +51,7 @@ class TestPauseFlow:
         flow = Flow()
         job_state = JobState(flow.flow_id)
         job_state.status = "running"
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
 
         class TestRoutine(Routine):
             def __init__(self):
@@ -58,15 +62,15 @@ class TestPauseFlow:
                 pass
 
         routine = TestRoutine()
-        routine_id = flow.add_routine(routine, "test")
+        flow.add_routine(routine, "test")
         slot = routine.get_slot("input")
 
-        from routilux.flow.task import SlotActivationTask, TaskPriority
+        from routilux.flow.task import SlotActivationTask
 
         task = SlotActivationTask(slot=slot, data={"test": "data"})
         flow._pending_tasks.append(task)
 
-        pause_flow(flow, reason="test")
+        pause_flow(flow, job_state, reason="test")
 
         assert hasattr(job_state, "pending_tasks")
         assert len(job_state.pending_tasks) == 1
@@ -80,8 +84,12 @@ class TestResumeFlow:
         """Test resume without job_state raises error."""
         flow = Flow()
 
-        with pytest.raises(ValueError, match="No JobState to resume"):
-            resume_flow(flow, None)
+        from routilux import JobState
+
+        # resume_flow now requires job_state parameter
+        wrong_job_state = JobState(flow_id="wrong")
+        with pytest.raises(ValueError, match="does not match"):
+            resume_flow(flow, wrong_job_state)
 
     def test_resume_with_mismatched_flow_id(self):
         """Test resume with mismatched flow_id raises error."""
@@ -121,7 +129,7 @@ class TestResumeFlow:
             "status": "running",
             "stats": {"processed": 5, "count": 10},
         }
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
 
         resume_flow(flow, job_state)
 
@@ -164,7 +172,7 @@ class TestResumeFlow:
                 "created_at": None,
             }
         ]
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
 
         resume_flow(flow, job_state)
 
@@ -179,20 +187,23 @@ class TestCancelFlow:
 
     def test_cancel_without_job_state(self):
         """Test cancel without job_state raises error."""
-        flow = Flow()
+        from routilux import JobState
 
-        with pytest.raises(ValueError, match="No active job_state"):
-            cancel_flow(flow, reason="test")
+        flow = Flow()
+        # cancel_flow now requires job_state parameter
+        wrong_job_state = JobState(flow_id="wrong")
+        with pytest.raises(ValueError, match="does not match"):
+            cancel_flow(flow, wrong_job_state, reason="test")
 
     def test_cancel_stops_execution(self):
         """Test cancel stops execution."""
         flow = Flow()
         job_state = JobState(flow.flow_id)
         job_state.status = "running"
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
         flow._running = True
 
-        cancel_flow(flow, reason="test cancel")
+        cancel_flow(flow, job_state, reason="test cancel")
 
         assert job_state.status == "cancelled"
         assert not flow._paused
@@ -206,7 +217,7 @@ class TestTaskSerialization:
         """Test serialize pending tasks with connection."""
         flow = Flow()
         job_state = JobState(flow.flow_id)
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
 
         class SourceRoutine(Routine):
             def __init__(self):
@@ -232,7 +243,7 @@ class TestTaskSerialization:
         target_slot = target.get_slot("input")
         connection = flow._find_connection(source_event, target_slot)
 
-        from routilux.flow.task import SlotActivationTask, TaskPriority
+        from routilux.flow.task import SlotActivationTask
 
         task = SlotActivationTask(
             slot=target_slot,
@@ -241,7 +252,7 @@ class TestTaskSerialization:
         )
         flow._pending_tasks.append(task)
 
-        serialize_pending_tasks(flow)
+        serialize_pending_tasks(flow, job_state)
 
         assert len(job_state.pending_tasks) == 1
         serialized = job_state.pending_tasks[0]
@@ -261,9 +272,9 @@ class TestTaskSerialization:
                 "data": {},
             }
         ]
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
 
-        deserialize_pending_tasks(flow)
+        deserialize_pending_tasks(flow, job_state)
 
         assert len(flow._pending_tasks) == 0
 
@@ -290,9 +301,9 @@ class TestTaskSerialization:
                 "data": {},
             }
         ]
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
 
-        deserialize_pending_tasks(flow)
+        deserialize_pending_tasks(flow, job_state)
 
         assert len(flow._pending_tasks) == 0
 

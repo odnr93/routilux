@@ -43,17 +43,8 @@ def deserialize_flow(flow: "Flow", data: Dict[str, Any]) -> None:
 
     Args:
         flow: Flow object.
-        data: Serialized data dictionary.
+        data: Serialized data dictionary (structure only, no execution state).
     """
-    from datetime import datetime
-
-    job_state_data = data.get("job_state", None)
-    if job_state_data:
-        if isinstance(job_state_data.get("created_at"), str):
-            job_state_data["created_at"] = datetime.fromisoformat(job_state_data["created_at"])
-        if isinstance(job_state_data.get("updated_at"), str):
-            job_state_data["updated_at"] = datetime.fromisoformat(job_state_data["updated_at"])
-
     Serializable.deserialize(flow, data)
 
     for routine in flow.routines.values():

@@ -12,10 +12,9 @@ import time
 class SearchTask(Routine):
     """A search task routine that simulates searching."""
 
-    def __init__(self, task_name: str):
+    def __init__(self):
         super().__init__()
-        self.task_name = task_name
-        self.set_config(task_name=task_name)
+        self.set_config(task_name="default")
 
         # Define trigger slot
         self.trigger_slot = self.define_slot("trigger", handler=self._handle_trigger)
@@ -47,12 +46,12 @@ class SearchTask(Routine):
 class ResultAggregator(Routine):
     """Aggregator routine that waits for all expected messages before processing."""
 
-    def __init__(self, expected_count: int = 3):
+    def __init__(self):
         super().__init__()
-        self.expected_count = expected_count
+        self.set_config(expected_count=3)
 
         # Set configuration
-        self.set_config(expected_count=expected_count, timeout=10.0)  # Optional timeout
+        self.set_config(timeout=10.0)  # Optional timeout
 
         # Define input slot with append strategy to collect all results
         self.input_slot = self.define_slot(
@@ -97,7 +96,7 @@ class ResultAggregator(Routine):
                     received_count = len(value)
                     break
 
-        expected_count = self.get_config("expected_count", self.expected_count)
+        expected_count = self.get_config("expected_count", 3)
 
         # Get current task_name from kwargs if available
         current_task = kwargs.get("task_name", "unknown")
@@ -175,12 +174,16 @@ def demo_aggregator():
     flow = Flow(flow_id="aggregator_demo")
 
     # Create search tasks
-    search1 = SearchTask("SearchEngine1")
-    search2 = SearchTask("SearchEngine2")
-    search3 = SearchTask("SearchEngine3")
+    search1 = SearchTask()
+    search1.set_config(task_name="SearchEngine1")
+    search2 = SearchTask()
+    search2.set_config(task_name="SearchEngine2")
+    search3 = SearchTask()
+    search3.set_config(task_name="SearchEngine3")
 
     # Create aggregator (expects 3 results)
-    aggregator = ResultAggregator(expected_count=3)
+    aggregator = ResultAggregator()
+    aggregator.set_config(expected_count=3)
 
     # Add to flow
     id1 = flow.add_routine(search1, "search1")

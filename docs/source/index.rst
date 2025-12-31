@@ -29,6 +29,14 @@ state management, and workflow orchestration capabilities.
       Get up and running with Routilux in minutes.
 
    .. grid-item-card::
+      :link: tutorial/index
+      :link-type: doc
+      
+      **Tutorial**
+      
+      Step-by-step guide from basics to advanced features.
+
+   .. grid-item-card::
       :link: user_guide/index
       :link-type: doc
       
@@ -52,6 +60,7 @@ state management, and workflow orchestration capabilities.
    introduction
    installation
    quickstart
+   tutorial/index
    user_guide/index
    api_reference/index
    examples/index

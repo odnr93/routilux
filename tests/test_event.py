@@ -230,7 +230,7 @@ class TestEmitAutoFlowDetection:
         flow.connect(source_id, "output", target_id, "input")
 
         # 执行 flow - 这会自动设置 routine._current_flow
-        job_state = flow.execute(source_id)
+        flow.execute(source_id)
         flow.wait_for_completion(timeout=2.0)
 
         # 验证数据正确传递（说明 flow 自动检测成功）
@@ -271,7 +271,7 @@ class TestEmitAutoFlowDetection:
 
         flow.connect(source_id, "output", target_id, "input")
 
-        job_state = flow.execute(source_id)
+        flow.execute(source_id)
         flow.wait_for_completion(timeout=2.0)
 
         # 验证显式传递 flow 仍然工作
@@ -346,7 +346,7 @@ class TestEmitAutoFlowDetection:
 
         flow.connect(source_id, "output", target_id, "input")
 
-        job_state = flow.execute(source_id)
+        flow.execute(source_id)
         flow.wait_for_completion(timeout=2.0)
 
         # 验证所有 emit 调用都成功
@@ -392,7 +392,7 @@ class TestEmitAutoFlowDetection:
 
         flow.connect(source_id, "output", target_id, "input")
 
-        job_state = flow.execute(source_id)
+        flow.execute(source_id)
         flow.wait_for_completion(timeout=2.0)
 
         # 验证显式传递的 flow 被使用（数据正确传递说明 flow 被正确使用）
@@ -438,7 +438,7 @@ class TestEmitAutoFlowDetection:
 
         flow.connect(source_id, "output", target_id, "input")
 
-        job_state = flow.execute(source_id)
+        flow.execute(source_id)
         flow.wait_for_completion(timeout=2.0)
 
         # 验证嵌套调用中的 emit 也能工作
@@ -480,7 +480,7 @@ class TestEmitAutoFlowDetection:
 
         # 执行并暂停
         job_state = flow.execute(source_id)
-        flow.pause(reason="test")
+        flow.pause(job_state, reason="test")
 
         # Resume
         resumed_job_state = flow.resume(job_state)

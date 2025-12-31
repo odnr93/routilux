@@ -4,9 +4,8 @@ Flow error handling integration tests.
 Tests task-level error handling through event loop.
 """
 
-import pytest
 from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
-from routilux.flow.task import SlotActivationTask, TaskPriority
+from routilux.flow.task import SlotActivationTask
 from routilux.flow.error_handling import handle_task_error
 
 
@@ -19,7 +18,7 @@ class TestTaskErrorHandling:
         from routilux.job_state import JobState
 
         job_state = JobState(flow.flow_id)
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
 
         class TestRoutine(Routine):
             def __init__(self):
@@ -30,7 +29,7 @@ class TestTaskErrorHandling:
                 raise ValueError("Test error")
 
         routine = TestRoutine()
-        routine_id = flow.add_routine(routine, "test")
+        flow.add_routine(routine, "test")
         routine.set_error_handler(ErrorHandler(strategy=ErrorStrategy.RETRY, max_retries=2))
 
         slot = routine.get_slot("input")
@@ -51,7 +50,7 @@ class TestTaskErrorHandling:
         from routilux.job_state import JobState
 
         job_state = JobState(flow.flow_id)
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
 
         class TestRoutine(Routine):
             def __init__(self):
@@ -62,7 +61,7 @@ class TestTaskErrorHandling:
                 raise ValueError("Test error")
 
         routine = TestRoutine()
-        routine_id = flow.add_routine(routine, "test")
+        flow.add_routine(routine, "test")
         routine.set_error_handler(ErrorHandler(strategy=ErrorStrategy.CONTINUE))
 
         slot = routine.get_slot("input")
@@ -82,7 +81,7 @@ class TestTaskErrorHandling:
         from routilux.job_state import JobState
 
         job_state = JobState(flow.flow_id)
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
 
         class TestRoutine(Routine):
             def __init__(self):
@@ -109,9 +108,10 @@ class TestTaskErrorHandling:
         if routine_state is not None:
             assert routine_state.get("status") == "skipped"
         else:
-            # If state doesn't exist, check that job_state was updated
+            # If state doesn't exist, check that job_state was accessed via thread-local storage
             # The skip strategy should have been processed
-            assert flow.job_state is not None
+            current_job_state = getattr(flow._current_execution_job_state, "value", None)
+            assert current_job_state is not None
 
     def test_handle_task_error_stop_strategy(self):
         """Test stop strategy (default) in task error handling."""
@@ -120,7 +120,8 @@ class TestTaskErrorHandling:
 
         job_state = JobState(flow.flow_id)
         job_state.status = "running"
-        flow.job_state = job_state
+        # Set JobState in thread-local storage for error handler access
+        flow._current_execution_job_state.value = job_state
         flow._running = True
 
         class TestRoutine(Routine):
@@ -132,7 +133,7 @@ class TestTaskErrorHandling:
                 raise ValueError("Test error")
 
         routine = TestRoutine()
-        routine_id = flow.add_routine(routine, "test")
+        flow.add_routine(routine, "test")
         # No error handler - should use default STOP
 
         slot = routine.get_slot("input")
@@ -151,7 +152,7 @@ class TestTaskErrorHandling:
 
         job_state = JobState(flow.flow_id)
         job_state.status = "running"
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
         flow._running = True
 
         from routilux.slot import Slot
@@ -170,7 +171,7 @@ class TestTaskErrorHandling:
         from routilux.job_state import JobState
 
         job_state = JobState(flow.flow_id)
-        flow.job_state = job_state
+        flow._current_execution_job_state.value = job_state
 
         class TestRoutine(Routine):
             def __init__(self):
@@ -181,7 +182,7 @@ class TestTaskErrorHandling:
                 raise ValueError("Test error")
 
         routine = TestRoutine()
-        routine_id = flow.add_routine(routine, "test")
+        flow.add_routine(routine, "test")
         routine.set_error_handler(ErrorHandler(strategy=ErrorStrategy.RETRY, max_retries=2))
 
         slot = routine.get_slot("input")

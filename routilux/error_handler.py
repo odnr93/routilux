@@ -267,8 +267,9 @@ class ErrorHandler(Serializable):
         elif self.strategy == ErrorStrategy.CONTINUE:
             logger.warning(f"Error in routine {routine_id}: {error}. Continuing execution.")
             # Record error but continue execution
-            if flow.job_state:
-                flow.job_state.record_execution(
+            job_state = getattr(flow._current_execution_job_state, "value", None)
+            if job_state:
+                job_state.record_execution(
                     routine_id,
                     "error_continued",
                     {"error": str(error), "error_type": type(error).__name__},
@@ -313,8 +314,9 @@ class ErrorHandler(Serializable):
         elif self.strategy == ErrorStrategy.SKIP:
             logger.warning(f"Error in routine {routine_id}: {error}. Skipping routine.")
             # Mark as skipped
-            if flow.job_state:
-                flow.job_state.update_routine_state(
+            job_state = getattr(flow._current_execution_job_state, "value", None)
+            if job_state:
+                job_state.update_routine_state(
                     routine_id, {"status": "skipped", "error": str(error)}
                 )
             return True

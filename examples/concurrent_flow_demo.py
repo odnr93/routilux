@@ -30,16 +30,23 @@ from routilux import Flow, Routine, ErrorHandler, ErrorStrategy
 class DataFetcher(Routine):
     """Fetch data from multiple sources concurrently"""
 
-    def __init__(self, source_name: str = None, delay: float = 0.2):
+    def __init__(self):
         super().__init__()
-        self.source_name = source_name or "unknown"
-        self.delay = delay
         self.input_slot = self.define_slot("trigger", handler=self.fetch_data)
         self.output_event = self.define_event("data_fetched", ["data", "source", "timestamp"])
         self._stats["fetch_count"] = 0
 
-        # Register for serialization
-        self.add_serializable_fields(["source_name", "delay"])
+    def configure(self, source_name: str = None, delay: float = 0.2):
+        """Configure the fetcher"""
+        self.set_config(source_name=source_name or "unknown", delay=delay)
+
+    @property
+    def source_name(self):
+        return self.get_config("source_name", "unknown")
+
+    @property
+    def delay(self):
+        return self.get_config("delay", 0.2)
 
     def fetch_data(self, **kwargs):
         """Simulate fetching data from a source (I/O operation)"""
@@ -68,17 +75,21 @@ class DataFetcher(Routine):
 class DataProcessor(Routine):
     """Process fetched data"""
 
-    def __init__(self, processor_id: str = None):
+    def __init__(self):
         super().__init__()
-        self.processor_id = processor_id or "unknown"
         self.input_slot = self.define_slot("data_input", handler=self.process_data)
         self.output_event = self.define_event(
             "data_processed", ["result", "processor_id", "processing_time"]
         )
         self._stats["process_count"] = 0
 
-        # Register for serialization
-        self.add_serializable_fields(["processor_id"])
+    def configure(self, processor_id: str = None):
+        """Configure the processor"""
+        self.set_config(processor_id=processor_id or "unknown")
+
+    @property
+    def processor_id(self):
+        return self.get_config("processor_id", "unknown")
 
     def process_data(self, data: Dict[str, Any], source: str, timestamp: float):
         """Process the fetched data"""
@@ -194,12 +205,18 @@ def create_concurrent_flow(max_workers: int = 5) -> Flow:
 
     # Create routines
     trigger = TriggerRoutine()
-    fetcher1 = DataFetcher("API_Server_1", delay=0.2)
-    fetcher2 = DataFetcher("API_Server_2", delay=0.2)
-    fetcher3 = DataFetcher("Database", delay=0.25)
-    processor1 = DataProcessor("processor_1")
-    processor2 = DataProcessor("processor_2")
-    processor3 = DataProcessor("processor_3")
+    fetcher1 = DataFetcher()
+    fetcher1.configure("API_Server_1", delay=0.2)
+    fetcher2 = DataFetcher()
+    fetcher2.configure("API_Server_2", delay=0.2)
+    fetcher3 = DataFetcher()
+    fetcher3.configure("Database", delay=0.25)
+    processor1 = DataProcessor()
+    processor1.configure("processor_1")
+    processor2 = DataProcessor()
+    processor2.configure("processor_2")
+    processor3 = DataProcessor()
+    processor3.configure("processor_3")
     aggregator = DataAggregator()
     formatter = ResultFormatter()
 
@@ -244,12 +261,18 @@ def create_sequential_flow() -> Flow:
 
     # Same structure as concurrent flow
     trigger = TriggerRoutine()
-    fetcher1 = DataFetcher("API_Server_1", delay=0.2)
-    fetcher2 = DataFetcher("API_Server_2", delay=0.2)
-    fetcher3 = DataFetcher("Database", delay=0.25)
-    processor1 = DataProcessor("processor_1")
-    processor2 = DataProcessor("processor_2")
-    processor3 = DataProcessor("processor_3")
+    fetcher1 = DataFetcher()
+    fetcher1.configure("API_Server_1", delay=0.2)
+    fetcher2 = DataFetcher()
+    fetcher2.configure("API_Server_2", delay=0.2)
+    fetcher3 = DataFetcher()
+    fetcher3.configure("Database", delay=0.25)
+    processor1 = DataProcessor()
+    processor1.configure("processor_1")
+    processor2 = DataProcessor()
+    processor2.configure("processor_2")
+    processor3 = DataProcessor()
+    processor3.configure("processor_3")
     aggregator = DataAggregator()
     formatter = ResultFormatter()
 
@@ -387,7 +410,8 @@ def test_concurrent_with_error_handling():
                 raise ValueError("Simulated network error")
             super().fetch_data(**kwargs)
 
-    failing_fetcher = FailingFetcher("API_Server_2", delay=0.1)
+    failing_fetcher = FailingFetcher()
+    failing_fetcher.configure("API_Server_2", delay=0.1)
     flow.routines["fetcher_2"] = failing_fetcher
 
     start_time = time.time()

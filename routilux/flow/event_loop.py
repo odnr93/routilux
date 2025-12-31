@@ -8,8 +8,7 @@ import queue
 import threading
 import time
 import logging
-from typing import Set, TYPE_CHECKING
-from concurrent.futures import ThreadPoolExecutor, Future
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from routilux.flow.task import SlotActivationTask
@@ -49,8 +48,10 @@ def event_loop(flow: "Flow") -> None:
                 # Wait a bit more to ensure no new tasks are being enqueued
                 time.sleep(0.05)
                 if is_all_tasks_complete(flow):
-                    if flow.job_state and flow.job_state.status == "running":
-                        flow.job_state.status = "completed"
+                    # Update JobState if available in thread-local storage
+                    job_state = getattr(flow._current_execution_job_state, "value", None)
+                    if job_state and job_state.status == "running":
+                        job_state.status = "completed"
                     break
                 continue
 
@@ -79,6 +80,11 @@ def execute_task(task: "SlotActivationTask", flow: "Flow") -> None:
         task: SlotActivationTask to execute.
         flow: Flow object.
     """
+    # Set JobState in thread-local storage for this task execution
+    # This allows handlers and error handlers to access JobState even in worker threads
+    if task.job_state:
+        flow._current_execution_job_state.value = task.job_state
+
     try:
         if task.connection:
             mapped_data = task.connection._apply_mapping(task.data)
@@ -91,6 +97,11 @@ def execute_task(task: "SlotActivationTask", flow: "Flow") -> None:
         from routilux.flow.error_handling import handle_task_error
 
         handle_task_error(task, e, flow)
+    finally:
+        # Clear thread-local storage after task execution
+        # Note: This is per-task, not per-execution, so we don't clear it here
+        # The execution-level cleanup happens in execute_sequential()
+        pass
 
 
 def enqueue_task(task: "SlotActivationTask", flow: "Flow") -> None:

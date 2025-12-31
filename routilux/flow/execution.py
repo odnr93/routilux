@@ -5,7 +5,6 @@ Handles sequential and concurrent execution of workflows.
 """
 
 import time
-import warnings
 import logging
 from datetime import datetime
 from typing import Dict, Optional, Any, TYPE_CHECKING
@@ -38,15 +37,8 @@ def execute_flow(
     if entry_routine_id not in flow.routines:
         raise ValueError(f"Entry routine '{entry_routine_id}' not found in flow")
 
-    if flow.job_state and flow.job_state.status == "running":
-        warnings.warn(
-            f"Starting new execution while previous execution (flow_id={flow.job_state.flow_id}) "
-            f"is still running. Each execute() call is independent - slot data is NOT shared "
-            f"between executions. If you need to aggregate data, use a single execute() that "
-            f"triggers multiple emits.",
-            UserWarning,
-            stacklevel=2,
-        )
+    # Note: Multiple executions are allowed and independent
+    # Each execute() creates a new JobState and execution context
 
     strategy = execution_strategy or flow.execution_strategy
 
@@ -79,7 +71,10 @@ def execute_sequential(
     job_state = JobState(flow.flow_id)
     job_state.status = "running"
     job_state.current_routine_id = entry_routine_id
-    flow.job_state = job_state
+
+    # Store JobState in thread-local storage for access during execution
+    # This allows event loop and error handlers to access the current JobState
+    flow._current_execution_job_state.value = job_state
 
     flow.execution_tracker = ExecutionTracker(flow.flow_id)
 
@@ -155,6 +150,10 @@ def execute_sequential(
         flow.execution_tracker.record_routine_end(entry_routine_id, "completed")
 
         job_state.status = "completed"
+
+        # Clear thread-local storage after execution completes
+        if hasattr(flow._current_execution_job_state, "value"):
+            flow._current_execution_job_state.value = None
 
     except Exception as e:
         error_handler = get_error_handler_for_routine(entry_routine, entry_routine_id, flow)
@@ -237,6 +236,10 @@ def execute_sequential(
             flow.execution_tracker.record_routine_end(entry_routine_id, "failed", error=str(e))
 
         logging.exception(f"Error executing flow: {e}")
+
+    # Clear thread-local storage after execution completes (success or failure)
+    if hasattr(flow._current_execution_job_state, "value"):
+        flow._current_execution_job_state.value = None
 
     return job_state
 

@@ -49,6 +49,18 @@ Examples demonstrating JobState and ExecutionTracker usage:
 python examples/state_management_example.py
 ```
 
+### job_state_management.py
+Comprehensive examples demonstrating JobState management:
+- Multiple independent executions
+- JobState serialization and persistence
+- Pause/resume with JobState
+- Cross-host execution simulation
+
+**Run:**
+```bash
+python examples/job_state_management.py
+```
+
 ### concurrent_flow_demo.py
 A comprehensive demo of concurrent execution capabilities:
 - Concurrent execution strategy with thread pools

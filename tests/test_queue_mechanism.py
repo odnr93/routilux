@@ -257,7 +257,7 @@ class TestPauseResumeSerialization:
 
         # 在任务处理前暂停（这在实际场景中可能需要在另一个线程中）
         # 这里我们验证 pause 方法能正确序列化 pending 任务
-        flow.pause(reason="test")
+        flow.pause(job_state, reason="test")
 
         # 验证 pending_tasks 被序列化
         assert hasattr(job_state, "pending_tasks")
@@ -295,7 +295,7 @@ class TestPauseResumeSerialization:
 
         # 执行并暂停
         job_state = flow.execute(source_id)
-        flow.pause(reason="test")
+        flow.pause(job_state, reason="test")
 
         # 序列化
         serialized = job_state.serialize()

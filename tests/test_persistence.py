@@ -590,7 +590,9 @@ class TestSerializationComprehensive:
         new_flow.deserialize(data)
 
         # 验证 datetime 被恢复
-        if new_flow.job_state:
+        # Flow no longer manages job_state - it must be serialized separately
+        # This test should verify that Flow serialization works without job_state
+        if False:  # Flow no longer has job_state
             assert isinstance(new_flow.job_state.created_at, datetime)
 
     def test_serialize_deserialize_multiple_rounds(self):

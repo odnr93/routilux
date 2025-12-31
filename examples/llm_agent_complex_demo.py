@@ -530,8 +530,7 @@ def test_pause_resume(flow: Flow):
 
     if job_state.status == "running":
         print("Pausing flow...")
-        flow.pause(checkpoint=True)
-        print(f"Flow paused: {flow._paused}")
+        flow.pause(job_state, reason="Test pause", checkpoint=True)
         print(f"Job state status: {job_state.status}")
 
         # Serialize job state
@@ -543,8 +542,7 @@ def test_pause_resume(flow: Flow):
         new_job_state = JobState()
         new_job_state.deserialize(job_state_data)
 
-        flow.job_state = new_job_state
-        resumed_state = flow.resume()
+        resumed_state = flow.resume(new_job_state)
 
         print(f"Resumed status: {resumed_state.status}")
         print("✓ Pause/resume tested")

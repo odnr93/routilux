@@ -74,6 +74,7 @@ def handle_task_error(
                         priority=task.priority,
                         retry_count=task.retry_count + 1,
                         max_retries=max_retries,
+                        job_state=task.job_state,  # Preserve JobState in retry task
                     )
                     flow._enqueue_task(retry_task)
                     return
@@ -87,14 +88,24 @@ def handle_task_error(
             return
 
         elif error_handler.strategy.value == "skip":
-            if flow.job_state:
-                flow.job_state.update_routine_state(routine_id or "", {"status": "skipped"})
+            # Get JobState from task (preferred) or thread-local storage (fallback)
+            job_state = (
+                task.job_state
+                if task.job_state
+                else getattr(flow._current_execution_job_state, "value", None)
+            )
+            if job_state:
+                job_state.update_routine_state(routine_id or "", {"status": "skipped"})
             return
 
-    if flow.job_state:
-        flow.job_state.status = "failed"
-        flow.job_state.update_routine_state(
-            routine_id or "", {"status": "failed", "error": str(error)}
-        )
+    # Get JobState from task (preferred) or thread-local storage (fallback)
+    job_state = (
+        task.job_state
+        if task.job_state
+        else getattr(flow._current_execution_job_state, "value", None)
+    )
+    if job_state:
+        job_state.status = "failed"
+        job_state.update_routine_state(routine_id or "", {"status": "failed", "error": str(error)})
 
     flow._running = False

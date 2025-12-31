@@ -96,7 +96,10 @@ class Flow(Serializable):
         self.flow_id: str = flow_id or str(uuid.uuid4())
         self.routines: Dict[str, "Routine"] = {}
         self.connections: List["Connection"] = []
-        self.job_state: Optional["JobState"] = None
+        # Internal: Thread-local storage for current execution JobState
+        # This is used during execution to pass JobState to event loop and error handlers
+        # Not part of public API - Flow does not manage execution state
+        self._current_execution_job_state: threading.local = threading.local()
         self._current_flow: Optional["Flow"] = None
         self.execution_tracker: Optional["ExecutionTracker"] = None
         self.error_handler: Optional["ErrorHandler"] = None
@@ -118,7 +121,6 @@ class Flow(Serializable):
         self.add_serializable_fields(
             [
                 "flow_id",
-                "job_state",
                 "_paused",
                 "execution_strategy",
                 "max_workers",
@@ -332,25 +334,32 @@ class Flow(Serializable):
 
         return get_error_handler_for_routine(routine, routine_id, self)
 
-    def pause(self, reason: str = "", checkpoint: Optional[Dict[str, Any]] = None) -> None:
+    def pause(
+        self, job_state: "JobState", reason: str = "", checkpoint: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Pause execution.
 
         Args:
+            job_state: JobState to pause.
             reason: Reason for pausing.
             checkpoint: Optional checkpoint data.
 
         Raises:
-            ValueError: If there is no active job_state.
+            ValueError: If job_state flow_id doesn't match.
         """
         from routilux.flow.state_management import pause_flow
 
-        pause_flow(self, reason, checkpoint)
+        if job_state.flow_id != self.flow_id:
+            raise ValueError(
+                f"JobState flow_id '{job_state.flow_id}' does not match Flow flow_id '{self.flow_id}'"
+            )
+        pause_flow(self, job_state, reason, checkpoint)
 
-    def resume(self, job_state: Optional["JobState"] = None) -> "JobState":
+    def resume(self, job_state: "JobState") -> "JobState":
         """Resume execution from paused or saved state.
 
         Args:
-            job_state: JobState to resume (uses current job_state if None).
+            job_state: JobState to resume.
 
         Returns:
             Updated JobState.
@@ -362,18 +371,23 @@ class Flow(Serializable):
 
         return resume_flow(self, job_state)
 
-    def cancel(self, reason: str = "") -> None:
+    def cancel(self, job_state: "JobState", reason: str = "") -> None:
         """Cancel execution.
 
         Args:
+            job_state: JobState to cancel.
             reason: Reason for cancellation.
 
         Raises:
-            ValueError: If there is no active job_state.
+            ValueError: If job_state flow_id doesn't match.
         """
         from routilux.flow.state_management import cancel_flow
 
-        cancel_flow(self, reason)
+        if job_state.flow_id != self.flow_id:
+            raise ValueError(
+                f"JobState flow_id '{job_state.flow_id}' does not match Flow flow_id '{self.flow_id}'"
+            )
+        cancel_flow(self, job_state, reason)
 
     def execute(
         self,
@@ -436,11 +450,19 @@ class Flow(Serializable):
         """Serialize Flow, including all routines and connections.
 
         Returns:
-            Serialized dictionary containing flow data.
+            Serialized dictionary containing flow data (structure only, no execution state).
 
         Raises:
             TypeError: If any Serializable object in the Flow cannot be constructed
                 without arguments.
+
+        Note:
+            Flow serialization only includes structure (routines, connections, config).
+            Execution state (JobState) must be serialized separately:
+            1. Serialize Flow: flow_data = flow.serialize()
+            2. Serialize JobState: job_state_data = job_state.serialize()
+            3. Deserialize both on target host
+            4. Use flow.resume(job_state) to continue execution
         """
         from routilux.flow.serialization import serialize_flow
 

@@ -158,7 +158,7 @@ class TestCompleteFlow:
         id_error2 = flow2.add_routine(error_handler2, "error")
         flow2.connect(id_proc2, "error", id_error2, "input")
 
-        job_state2 = flow2.execute(id_proc2, entry_params={"should_fail": True})
+        flow2.execute(id_proc2, entry_params={"should_fail": True})
         flow2.wait_for_completion(timeout=2.0)
         assert len(error_results) > 0
 
@@ -202,7 +202,7 @@ class TestCompleteFlow:
         flow.connect(source_id, "output", id_agg, "input")
 
         # 执行单个源，它会发出多个消息
-        job_state = flow.execute(source_id)
+        flow.execute(source_id)
 
         # 等待所有任务完成
         flow.wait_for_completion(timeout=2.0)

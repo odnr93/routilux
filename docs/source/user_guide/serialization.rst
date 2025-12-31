@@ -299,3 +299,412 @@ If you try to serialize a method from another routine, you'll get a clear error:
 **Note**: Functions (not methods) are always allowed because they can be
 imported by module name in any process.
 
+Flow and JobState Separation
+------------------------------
+
+**Critical Design Principle**: Flow and JobState are **completely decoupled**.
+
+- **Flow**: Contains only the workflow definition (routines, connections, configuration)
+- **JobState**: Contains execution state (execution history, routine states, status)
+
+**Why This Matters**:
+
+- Flow serialization does **NOT** include execution state
+- JobState must be serialized **separately** for recovery
+- This allows multiple independent executions of the same flow
+- Enables proper cross-host execution and recovery
+
+**Serialization Pattern**:
+
+.. code-block:: python
+
+   # Serialize Flow (workflow definition only)
+   flow_data = flow.serialize()
+   # flow_data does NOT contain job_state
+   
+   # Serialize JobState separately (execution state)
+   job_state_data = job_state.serialize()
+   
+   # Save both for recovery
+   save_flow(flow_data)
+   save_job_state(job_state_data)
+
+**Deserialization Pattern**:
+
+.. code-block:: python
+
+   # Deserialize Flow
+   new_flow = Flow()
+   new_flow.deserialize(flow_data)
+   
+   # Deserialize JobState separately
+   new_job_state = JobState()
+   new_job_state.deserialize(job_state_data)
+   
+   # Resume execution
+   resumed = new_flow.resume(new_job_state)
+
+Cross-Host Serialization and Execution
+---------------------------------------
+
+routilux supports transferring workflows and execution state across different hosts
+for distributed execution and recovery.
+
+**Use Cases**:
+
+- **Distributed Execution**: Execute workflow on one host, transfer to another
+- **Recovery**: Resume execution on a different host after failure
+- **Load Balancing**: Move execution to a less loaded host
+- **Persistence**: Save execution state for later recovery
+
+**Complete Example: Cross-Host Execution**:
+
+.. code-block:: python
+   :linenos:
+
+   # ============================================
+   # Host A: Execute and Prepare for Transfer
+   # ============================================
+   
+   from routilux import Flow, Routine, JobState
+   from serilux import register_serializable
+   import json
+   
+   @register_serializable
+   class DataSource(Routine):
+       def __init__(self):
+           super().__init__()
+           self.trigger_slot = self.define_slot("trigger", handler=self.send)
+           self.output_event = self.define_event("output", ["data"])
+       
+       def send(self, **kwargs):
+           self.emit("output", data="initial_data")
+   
+   @register_serializable
+   class DataProcessor(Routine):
+       def __init__(self):
+           super().__init__()
+           self.input_slot = self.define_slot("input", handler=self.process)
+           self.output_event = self.define_event("output", ["result"])
+       
+       def process(self, data=None, **kwargs):
+           result = f"Processed: {data}"
+           self.emit("output", result=result)
+   
+   # Create flow on Host A
+   flow = Flow(flow_id="cross_host_flow")
+   source = DataSource()
+   processor = DataProcessor()
+   source_id = flow.add_routine(source, "source")
+   processor_id = flow.add_routine(processor, "processor")
+   flow.connect(source_id, "output", processor_id, "input")
+   
+   # Execute and pause (simulating transfer point)
+   job_state = flow.execute(source_id)
+   flow.pause(job_state, reason="Transfer to Host B")
+   
+   # Serialize both Flow and JobState
+   flow_data = flow.serialize()
+   job_state_data = job_state.serialize()
+   
+   # Prepare for transfer (JSON format)
+   transfer_data = {
+       "flow": flow_data,
+       "job_state": job_state_data
+   }
+   
+   # Save to file (or send over network)
+   with open("transfer.json", "w") as f:
+       json.dump(transfer_data, f, indent=2)
+   
+   print("✅ Host A: Flow and JobState serialized and ready for transfer")
+   
+   # ============================================
+   # Host B: Receive and Resume Execution
+   # ============================================
+   
+   # Load from file (or receive from network)
+   with open("transfer.json", "r") as f:
+       transfer_data = json.load(f)
+   
+   # Deserialize Flow
+   new_flow = Flow()
+   new_flow.deserialize(transfer_data["flow"])
+   
+   # Deserialize JobState
+   new_job_state = JobState()
+   new_job_state.deserialize(transfer_data["job_state"])
+   
+   # Verify deserialization
+   assert new_flow.flow_id == flow.flow_id
+   assert new_job_state.job_id == job_state.job_id
+   assert new_job_state.status == "paused"
+   
+   # Resume execution on Host B
+   resumed_job_state = new_flow.resume(new_job_state)
+   
+   # Wait for completion
+   new_flow.wait_for_completion(timeout=10.0)
+   
+   print(f"✅ Host B: Execution resumed and completed")
+   print(f"   Final status: {resumed_job_state.status}")
+   print(f"   Execution history: {len(resumed_job_state.execution_history)} records")
+
+**Expected Output**:
+
+::
+
+   ✅ Host A: Flow and JobState serialized and ready for transfer
+   ✅ Host B: Execution resumed and completed
+      Final status: completed
+      Execution history: 4 records
+
+**Key Points**:
+
+1. **Flow and JobState are serialized separately** - This is required
+2. **Both must be transferred** - Flow (definition) + JobState (execution state)
+3. **Routines must be registered** - Use ``@register_serializable`` decorator
+4. **Deserialization order matters** - Deserialize Flow first, then JobState
+5. **Resume uses deserialized JobState** - Pass the deserialized JobState to ``resume()``
+
+**Network Transfer Example**:
+
+.. code-block:: python
+   :linenos:
+
+   import socket
+   import json
+   import pickle
+   
+   # Host A: Send
+   def send_to_host_b(flow_data, job_state_data, host_b_address):
+       transfer_data = {
+           "flow": flow_data,
+           "job_state": job_state_data
+       }
+       
+       # Serialize to JSON
+       json_data = json.dumps(transfer_data)
+       
+       # Send over network
+       sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+       sock.connect(host_b_address)
+       sock.sendall(json_data.encode())
+       sock.close()
+   
+   # Host B: Receive
+   def receive_from_host_a(port):
+       sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+       sock.bind(("", port))
+       sock.listen(1)
+       conn, addr = sock.accept()
+       
+       # Receive data
+       data = b""
+       while True:
+           chunk = conn.recv(4096)
+           if not chunk:
+               break
+           data += chunk
+       
+       conn.close()
+       sock.close()
+       
+       # Deserialize
+       transfer_data = json.loads(data.decode())
+       return transfer_data["flow"], transfer_data["job_state"]
+
+**Database Storage Example**:
+
+.. code-block:: python
+   :linenos:
+
+   import sqlite3
+   import json
+   
+   # Host A: Save to database
+   def save_execution_to_db(flow_data, job_state_data, execution_id):
+       conn = sqlite3.connect("executions.db")
+       cursor = conn.cursor()
+       
+       cursor.execute("""
+           CREATE TABLE IF NOT EXISTS executions (
+               execution_id TEXT PRIMARY KEY,
+               flow_data TEXT,
+               job_state_data TEXT,
+               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+           )
+       """)
+       
+       cursor.execute("""
+           INSERT INTO executions (execution_id, flow_data, job_state_data)
+           VALUES (?, ?, ?)
+       """, (execution_id, json.dumps(flow_data), json.dumps(job_state_data)))
+       
+       conn.commit()
+       conn.close()
+   
+   # Host B: Load from database
+   def load_execution_from_db(execution_id):
+       conn = sqlite3.connect("executions.db")
+       cursor = conn.cursor()
+       
+       cursor.execute("""
+           SELECT flow_data, job_state_data
+           FROM executions
+           WHERE execution_id = ?
+       """, (execution_id,))
+       
+       row = cursor.fetchone()
+       conn.close()
+       
+       if row:
+           flow_data = json.loads(row[0])
+           job_state_data = json.loads(row[1])
+           return flow_data, job_state_data
+       else:
+           return None, None
+
+**Best Practices for Cross-Host Execution**:
+
+1. **Always serialize Flow and JobState separately**:
+
+   .. code-block:: python
+
+      # ✅ Correct
+      flow_data = flow.serialize()
+      job_state_data = job_state.serialize()
+      
+      # ❌ Wrong: Flow doesn't include JobState
+      # flow_data = flow.serialize(include_execution_state=True)  # This doesn't exist!
+
+2. **Register all custom Routine classes**:
+
+   .. code-block:: python
+
+      from serilux import register_serializable
+      
+      @register_serializable
+      class MyRoutine(Routine):
+          def __init__(self):
+              super().__init__()
+              # ...
+
+3. **Use no-argument constructors**:
+
+   .. code-block:: python
+
+      # ✅ Correct
+      class MyRoutine(Routine):
+          def __init__(self):
+              super().__init__()
+              self.set_config(param1="value1")
+      
+      # ❌ Wrong: Constructor with parameters
+      class MyRoutine(Routine):
+          def __init__(self, param1):  # Will fail during deserialization!
+              super().__init__()
+              self.param1 = param1
+
+4. **Validate before transfer**:
+
+   .. code-block:: python
+
+      # Serialize and validate
+      flow_data = flow.serialize()  # Validates automatically
+      job_state_data = job_state.serialize()
+      
+      # Test deserialization locally before transfer
+      test_flow = Flow()
+      test_flow.deserialize(flow_data)
+      
+      test_job_state = JobState()
+      test_job_state.deserialize(job_state_data)
+      
+      # If this works, safe to transfer
+
+5. **Handle errors gracefully**:
+
+   .. code-block:: python
+
+      try:
+          new_flow = Flow()
+          new_flow.deserialize(flow_data)
+          
+          new_job_state = JobState()
+          new_job_state.deserialize(job_state_data)
+          
+          resumed = new_flow.resume(new_job_state)
+      except Exception as e:
+          print(f"Failed to resume execution: {e}")
+          # Handle error (retry, log, notify, etc.)
+
+**Common Pitfalls**:
+
+1. **Forgetting to serialize JobState**:
+
+   .. code-block:: python
+
+      # ❌ Wrong: Only serializing Flow
+      flow_data = flow.serialize()
+      # JobState is lost!
+      
+      # ✅ Correct: Serialize both
+      flow_data = flow.serialize()
+      job_state_data = job_state.serialize()
+
+2. **Assuming Flow includes execution state**:
+
+   .. code-block:: python
+
+      # ❌ Wrong: Flow doesn't have job_state
+      flow_data = flow.serialize()
+      # flow_data["job_state"]  # KeyError!
+      
+      # ✅ Correct: JobState is separate
+      job_state_data = job_state.serialize()
+
+3. **Not registering custom routines**:
+
+   .. code-block:: python
+
+      # ❌ Wrong: Not registered
+      class MyRoutine(Routine):
+          def __init__(self):
+              super().__init__()
+      
+      # Will fail during deserialization on Host B
+      
+      # ✅ Correct: Registered
+      @register_serializable
+      class MyRoutine(Routine):
+          def __init__(self):
+              super().__init__()
+
+4. **Using constructor parameters**:
+
+   .. code-block:: python
+
+      # ❌ Wrong: Constructor with parameters
+      class MyRoutine(Routine):
+          def __init__(self, max_items):
+              super().__init__()
+              self.max_items = max_items
+      
+      # Will fail during deserialization
+      
+      # ✅ Correct: Use _config
+      class MyRoutine(Routine):
+          def __init__(self):
+              super().__init__()
+          
+          def setup(self, max_items):
+              self.set_config(max_items=max_items)
+
+Related Topics
+--------------
+
+- :doc:`job_state` - Detailed JobState guide
+- :doc:`state_management` - Pause, resume, and checkpoint management
+- :doc:`flows` - Flow execution and management
+

@@ -25,7 +25,12 @@ class TaskPriority(Enum):
 
 @dataclass
 class SlotActivationTask:
-    """Slot activation task for queue-based execution."""
+    """Slot activation task for queue-based execution.
+
+    Each task is associated with a JobState to track execution state.
+    This allows tasks executed in worker threads to access and update
+    the correct JobState, even when running concurrently.
+    """
 
     slot: "Slot"
     data: Dict[str, Any]
@@ -34,6 +39,7 @@ class SlotActivationTask:
     retry_count: int = 0
     max_retries: int = 0
     created_at: Optional[datetime] = None
+    job_state: Optional[Any] = None  # JobState for this execution
 
     def __post_init__(self):
         if self.created_at is None:

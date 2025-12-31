@@ -181,24 +181,36 @@ class TestFlowWithJobStateSerialization:
     """测试包含 JobState 的 Flow 序列化"""
 
     def test_job_state_must_be_serialized_and_restored(self):
-        """测试：JobState 必须被序列化和恢复"""
+        """测试：JobState 必须单独序列化和恢复（Flow 不再管理 JobState）"""
         flow = Flow()
         job_state = JobState(flow_id=flow.flow_id)
         job_state.status = "running"
         job_state.current_routine_id = "routine1"
-        flow.job_state = job_state
 
-        data = flow.serialize()
-        assert "job_state" in data, "job_state 必须被序列化"
+        # Flow 序列化不包含执行状态
+        flow_data = flow.serialize()
+        assert "job_state" not in flow_data, "Flow 序列化不应包含执行状态"
 
+        # JobState 需要单独序列化
+        job_state_data = job_state.serialize()
+        assert "job_id" in job_state_data, "JobState 必须被序列化"
+        assert job_state_data["flow_id"] == flow.flow_id
+        assert job_state_data["status"] == "running"
+        assert job_state_data["current_routine_id"] == "routine1"
+
+        # 恢复 Flow
         new_flow = Flow()
-        new_flow.deserialize(data)
+        new_flow.deserialize(flow_data)
+
+        # 恢复 JobState
+        new_job_state = JobState()
+        new_job_state.deserialize(job_state_data)
 
         # 严格验证：必须被恢复
-        assert new_flow.job_state is not None, "job_state 必须被恢复"
-        assert new_flow.job_state.flow_id == flow.flow_id
-        assert new_flow.job_state.status == "running"
-        assert new_flow.job_state.current_routine_id == "routine1"
+        assert new_job_state is not None, "job_state 必须被恢复"
+        assert new_job_state.flow_id == flow.flow_id
+        assert new_job_state.status == "running"
+        assert new_job_state.current_routine_id == "routine1"
 
 
 class TestRoutineHandlerRestoration:

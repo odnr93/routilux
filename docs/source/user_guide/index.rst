@@ -13,5 +13,6 @@ This section provides detailed guidance on using routilux.
    aggregation_pattern
    state_management
    error_handling
+   job_state
    serialization
 

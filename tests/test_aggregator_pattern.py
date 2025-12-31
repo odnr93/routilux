@@ -119,7 +119,7 @@ class TestAggregatorPattern:
         flow.connect(agg_id, "aggregated", consumer_id, "input")
 
         # Execute - single execute that triggers multiple emits
-        job_state = flow.execute(source_id)
+        flow.execute(source_id)
 
         # Wait for all tasks to complete
         flow.wait_for_completion(timeout=2.0)
@@ -163,7 +163,7 @@ class TestAggregatorPattern:
         flow.connect(source_id, "output", agg_id, "input")
 
         # Execute - only 2 messages will be emitted
-        job_state = flow.execute(source_id)
+        flow.execute(source_id)
 
         # Wait for all tasks to complete
         flow.wait_for_completion(timeout=2.0)
@@ -197,7 +197,7 @@ class TestAggregatorPattern:
 
         try:
             # Execute - single execute that triggers multiple emits
-            job_state = flow.execute(source_id)
+            flow.execute(source_id)
 
             # Wait for completion
             flow.wait_for_completion(timeout=5.0)

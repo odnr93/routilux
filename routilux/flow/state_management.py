@@ -11,11 +11,11 @@ from typing import Dict, Any, Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from routilux.flow.flow import Flow
     from routilux.job_state import JobState
-    from routilux.flow.task import SlotActivationTask, TaskPriority
 
 
 def pause_flow(
     flow: "Flow",
+    job_state: "JobState",
     reason: str = "",
     checkpoint: Optional[Dict[str, Any]] = None,
 ) -> None:
@@ -23,14 +23,17 @@ def pause_flow(
 
     Args:
         flow: Flow object.
+        job_state: JobState to pause.
         reason: Reason for pausing.
         checkpoint: Optional checkpoint data.
 
     Raises:
-        ValueError: If there is no active job_state.
+        ValueError: If job_state flow_id doesn't match.
     """
-    if not flow.job_state:
-        raise ValueError("No active job_state to pause. Flow must be executing.")
+    if job_state.flow_id != flow.flow_id:
+        raise ValueError(
+            f"JobState flow_id '{job_state.flow_id}' does not match Flow flow_id '{flow.flow_id}'"
+        )
 
     flow._paused = True
 
@@ -49,10 +52,10 @@ def pause_flow(
         "queue_size": flow._task_queue.qsize(),
     }
 
-    flow.job_state.pause_points.append(pause_point)
-    flow.job_state._set_paused(reason=reason, checkpoint=checkpoint)
+    job_state.pause_points.append(pause_point)
+    job_state._set_paused(reason=reason, checkpoint=checkpoint)
 
-    serialize_pending_tasks(flow)
+    serialize_pending_tasks(flow, job_state)
 
 
 def wait_for_active_tasks(flow: "Flow") -> None:
@@ -77,15 +80,13 @@ def wait_for_active_tasks(flow: "Flow") -> None:
         time.sleep(check_interval)
 
 
-def serialize_pending_tasks(flow: "Flow") -> None:
+def serialize_pending_tasks(flow: "Flow", job_state: "JobState") -> None:
     """Serialize pending tasks to JobState.
 
     Args:
         flow: Flow object.
+        job_state: JobState to serialize tasks to.
     """
-    if not flow.job_state:
-        return
-
     serialized_tasks = []
     for task in flow._pending_tasks:
         connection = task.connection
@@ -117,22 +118,23 @@ def serialize_pending_tasks(flow: "Flow") -> None:
         }
         serialized_tasks.append(serialized)
 
-    flow.job_state.pending_tasks = serialized_tasks
+    job_state.pending_tasks = serialized_tasks
 
 
-def deserialize_pending_tasks(flow: "Flow") -> None:
+def deserialize_pending_tasks(flow: "Flow", job_state: "JobState") -> None:
     """Deserialize pending tasks from JobState.
 
     Args:
         flow: Flow object.
+        job_state: JobState to deserialize tasks from.
     """
-    if not flow.job_state or not hasattr(flow.job_state, "pending_tasks"):
+    if not hasattr(job_state, "pending_tasks") or not job_state.pending_tasks:
         return
 
     from routilux.flow.task import SlotActivationTask, TaskPriority
 
     flow._pending_tasks = []
-    for serialized in flow.job_state.pending_tasks:
+    for serialized in job_state.pending_tasks:
         slot_routine_id = serialized.get("slot_routine_id")
         slot_name = serialized.get("slot_name")
 
@@ -176,17 +178,18 @@ def deserialize_pending_tasks(flow: "Flow") -> None:
                 if serialized.get("created_at")
                 else None
             ),
+            job_state=job_state,  # Pass JobState to deserialized task
         )
 
         flow._pending_tasks.append(task)
 
 
-def resume_flow(flow: "Flow", job_state: Optional["JobState"] = None) -> "JobState":
+def resume_flow(flow: "Flow", job_state: "JobState") -> "JobState":
     """Resume execution from paused or saved state.
 
     Args:
         flow: Flow object.
-        job_state: JobState to resume (uses current job_state if None).
+        job_state: JobState to resume.
 
     Returns:
         Updated JobState.
@@ -194,12 +197,6 @@ def resume_flow(flow: "Flow", job_state: Optional["JobState"] = None) -> "JobSta
     Raises:
         ValueError: If job_state flow_id doesn't match or routine doesn't exist.
     """
-    if job_state is None:
-        job_state = flow.job_state
-
-    if job_state is None:
-        raise ValueError("No JobState to resume")
-
     if job_state.flow_id != flow.flow_id:
         raise ValueError(
             f"JobState flow_id '{job_state.flow_id}' does not match Flow flow_id '{flow.flow_id}'"
@@ -210,7 +207,9 @@ def resume_flow(flow: "Flow", job_state: Optional["JobState"] = None) -> "JobSta
 
     job_state._set_running()
     flow._paused = False
-    flow.job_state = job_state
+
+    # Store JobState in thread-local storage for access during execution
+    flow._current_execution_job_state.value = job_state
 
     for routine_id, routine_state in job_state.routine_states.items():
         if routine_id in flow.routines:
@@ -221,7 +220,7 @@ def resume_flow(flow: "Flow", job_state: Optional["JobState"] = None) -> "JobSta
     for r in flow.routines.values():
         r._current_flow = flow
 
-    deserialize_pending_tasks(flow)
+    deserialize_pending_tasks(flow, job_state)
 
     for task in flow._pending_tasks:
         flow._task_queue.put(task)
@@ -235,24 +234,30 @@ def resume_flow(flow: "Flow", job_state: Optional["JobState"] = None) -> "JobSta
     return job_state
 
 
-def cancel_flow(flow: "Flow", reason: str = "") -> None:
+def cancel_flow(flow: "Flow", job_state: "JobState", reason: str = "") -> None:
     """Cancel execution.
 
     Args:
         flow: Flow object.
+        job_state: JobState to cancel.
         reason: Reason for cancellation.
 
     Raises:
-        ValueError: If there is no active job_state.
+        ValueError: If job_state flow_id doesn't match.
     """
-    if not flow.job_state:
-        raise ValueError("No active job_state to cancel. Flow must be executing.")
+    if job_state.flow_id != flow.flow_id:
+        raise ValueError(
+            f"JobState flow_id '{job_state.flow_id}' does not match Flow flow_id '{flow.flow_id}'"
+        )
 
-    flow.job_state._set_cancelled(reason=reason)
+    job_state._set_cancelled(reason=reason)
     flow._paused = False
 
-    flow._running = False
-    with flow._execution_lock:
-        for future in flow._active_tasks.copy():
-            future.cancel()
-        flow._active_tasks.clear()
+    # Stop event loop if cancelling current execution
+    current_job_state = getattr(flow._current_execution_job_state, "value", None)
+    if job_state == current_job_state:
+        flow._running = False
+        with flow._execution_lock:
+            for future in flow._active_tasks.copy():
+                future.cancel()
+            flow._active_tasks.clear()

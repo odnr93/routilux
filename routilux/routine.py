@@ -336,9 +336,22 @@ class Routine(Serializable):
         self._stats["emitted_events"].append({"event": event_name, "data": kwargs})
 
         # If flow exists, record execution history
+        # Note: JobState is passed through tasks, so we can't access it directly here
+        # Execution history is recorded when tasks are created in event.emit()
+        # This is handled in the event emission logic
         if flow is not None:
-            if flow.job_state is not None:
-                flow.job_state.record_execution(self._id, event_name, kwargs)
+            # Try to get JobState from thread-local storage (for direct calls)
+            # For queue-based execution, JobState is passed through tasks
+            job_state = getattr(flow._current_execution_job_state, "value", None)
+            if job_state is not None:
+                # Find routine_id in flow (not self._id which is memory address)
+                routine_id = None
+                for rid, routine in flow.routines.items():
+                    if routine is self:
+                        routine_id = rid
+                        break
+                if routine_id:
+                    job_state.record_execution(routine_id, event_name, kwargs)
 
             # Record to execution tracker
             if flow.execution_tracker is not None:
