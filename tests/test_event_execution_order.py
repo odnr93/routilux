@@ -184,8 +184,8 @@ class TestEventExecutionOrder:
         flow.connect("intermediate2", "output", "leaf2", "input")
 
         # Execute
-        flow.execute("source")
-        flow.wait_for_completion()
+        job_state = flow.execute("source")
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # Verify execution order
         order = tracker.get_order()
@@ -255,8 +255,8 @@ class TestEventExecutionOrder:
         flow.connect("B", "output", "C", "input")
 
         # Execute
-        flow.execute("source")
-        flow.wait_for_completion()
+        job_state = flow.execute("source")
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
 
         # Verify execution order
         order = tracker.get_order()
@@ -299,10 +299,10 @@ class TestEventExecutionOrder:
         flow.connect("source", "output", "routine3", "input")
 
         # Execute
-        flow.execute("source")
+        job_state = flow.execute("source")
 
         # Wait for completion
-        flow.wait_for_completion()
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
         flow.shutdown()
 
         # Verify all routines executed

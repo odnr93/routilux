@@ -119,10 +119,12 @@ class TestAggregatorPattern:
         flow.connect(agg_id, "aggregated", consumer_id, "input")
 
         # Execute - single execute that triggers multiple emits
-        flow.execute(source_id)
+        job_state = flow.execute(source_id)
 
         # Wait for all tasks to complete
-        flow.wait_for_completion(timeout=2.0)
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
         time.sleep(0.1)  # Additional wait for handler execution
 
         # Verify
@@ -163,10 +165,12 @@ class TestAggregatorPattern:
         flow.connect(source_id, "output", agg_id, "input")
 
         # Execute - only 2 messages will be emitted
-        flow.execute(source_id)
+        job_state = flow.execute(source_id)
 
         # Wait for all tasks to complete
-        flow.wait_for_completion(timeout=2.0)
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow, job_state, timeout=2.0)
         time.sleep(0.1)  # Additional wait for handler execution
 
         # Verify - should not have processed
@@ -197,10 +201,12 @@ class TestAggregatorPattern:
 
         try:
             # Execute - single execute that triggers multiple emits
-            flow.execute(source_id)
+            job_state = flow.execute(source_id)
 
             # Wait for completion
-            flow.wait_for_completion(timeout=5.0)
+            from routilux.job_state import JobState
+
+            JobState.wait_for_completion(flow, job_state, timeout=5.0)
             time.sleep(0.1)  # Additional wait for handler execution
 
             # Verify

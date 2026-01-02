@@ -478,7 +478,13 @@ class Flow(Serializable):
         self._running = False
 
         if wait:
-            self.wait_for_completion(timeout=timeout)
+            import warnings
+
+            # Suppress deprecation warning for shutdown - it's a generic cleanup method
+            # that doesn't have a specific job_state context
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=DeprecationWarning, module="routilux.flow.flow")
+                self.wait_for_completion(timeout=timeout)
 
         if self._executor:
             self._executor.shutdown(wait=wait)

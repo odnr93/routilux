@@ -487,7 +487,9 @@ class TestEmitAutoFlowDetection:
 
         # Resume
         resumed_job_state = flow.resume(job_state)
-        flow.wait_for_completion(timeout=2.0)
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow, resumed_job_state, timeout=2.0)
 
         # 验证 resume 后 emit 仍然能自动检测 flow
         # 注意：这个测试主要验证 resume 后 _current_flow 被正确设置

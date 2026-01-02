@@ -334,9 +334,11 @@ class TestFlowDeserializeAndExecute:
         # 注意：handler 可能无法完全恢复（特别是闭包和 lambda），
         # 但至少应该能够执行而不抛出异常
         try:
-            new_flow.execute(source_id)
+            job_state = new_flow.execute(source_id)
             if new_flow.execution_strategy == "concurrent":
-                new_flow.wait_for_completion(timeout=2.0)
+                from routilux.job_state import JobState
+
+                JobState.wait_for_completion(new_flow, job_state, timeout=2.0)
         except Exception as e:
             pytest.fail(f"反序列化后的 Flow 执行失败: {e}")
 

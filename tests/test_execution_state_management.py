@@ -464,7 +464,9 @@ class TestPauseResumeWithJobState:
         assert resumed_job_state.status == "running"
 
         # Wait for completion
-        flow.wait_for_completion(timeout=2.0)
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow, resumed_job_state, timeout=2.0)
 
         # Check final status (may need to refresh from job_state)
         # The status is updated in the JobState object
@@ -589,7 +591,7 @@ class TestSerializationWithMultipleExecutions:
 
         # Resume
         resumed = new_flow.resume(new_job_state)
-        new_flow.wait_for_completion(timeout=2.0)
+        JobState.wait_for_completion(new_flow, resumed, timeout=2.0)
 
         # Status may be updated in resumed JobState
         assert resumed.status in ["completed", "running"]

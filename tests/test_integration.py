@@ -154,8 +154,10 @@ class TestCompleteFlow:
         id_error2 = flow2.add_routine(error_handler2, "error")
         flow2.connect(id_proc2, "error", id_error2, "input")
 
-        flow2.execute(id_proc2, entry_params={"should_fail": True})
-        flow2.wait_for_completion(timeout=2.0)
+        job_state2 = flow2.execute(id_proc2, entry_params={"should_fail": True})
+        from routilux.job_state import JobState
+
+        JobState.wait_for_completion(flow2, job_state2, timeout=2.0)
         assert len(error_results) > 0
 
     def test_parallel_processing_flow(self):
