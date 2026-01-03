@@ -262,7 +262,11 @@ def host_b_load_and_resume(storage_key: str, user_response: str):
             logger.debug("EVENT", "调用user_input slot handler", 
                         routine_id=agent_routine_id,
                         user_response=user_response)
-            user_input_slot.call_handler({"user_response": user_response})
+            # Use receive() instead of call_handler() to properly set up execution context
+            # receive() accepts job_state and flow parameters to set up the context
+            user_input_slot.receive({"user_response": user_response}, 
+                                   job_state=resumed_job_state, 
+                                   flow=flow)
         else:
             logger.warning("ROUTINE", "未找到user_input slot")
     else:
