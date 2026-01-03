@@ -1,6 +1,6 @@
 version = 1
 revision = 3
-requires-python = ">=3.8"
+requires-python = ">=3.8, <3.15"
 resolution-markers = [
     "python_full_version >= '3.11'",
     "python_full_version == '3.10.*'",
@@ -1794,7 +1794,7 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=0.991" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
-    { name = "serilux", specifier = ">=0.2.0" },
+    { name = "serilux", specifier = ">=0.3.1" },
     { name = "sphinx", marker = "extra == 'dev'", specifier = ">=5.0.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=5.0.0,<9.0.0" },
     { name = "sphinx-autodoc-typehints", marker = "extra == 'docs'", specifier = ">=1.19.0" },
@@ -1825,11 +1825,11 @@ docs = [
 
 [[package]]
 name = "serilux"
-version = "0.2.1"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/4b/fe/42ae2b3b0599cdbc8bcbfbdf0a4142b135c91a9a46bdfeb1c8109996fd57/serilux-0.2.1.tar.gz", hash = "sha256:83fcc7207043978da344d02d96863db55c142af96f31bd3995359b4eecb9eb42", size = 53963, upload-time = "2025-12-29T08:15:05.287Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/80/0c/550bd830711c193661149b9aa3a53d55749ca0ef6b21c1f922b0fac1175b/serilux-0.3.1.tar.gz", hash = "sha256:b44ca473144dafb713d2198715439e5342a6ef49112282825811260f399e3259", size = 55882, upload-time = "2026-01-03T04:42:52.287Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b8/27/d5d4b675627fe7d1b46171e4f03753375ded44e54453a002b4715c514d60/serilux-0.2.1-py3-none-any.whl", hash = "sha256:03889565b71edabb6f47ab7157cc47a19d4c701f6b8b04ef391c29e7cf266260", size = 20867, upload-time = "2025-12-29T08:15:04.065Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/d1/82c696cc3f7f85004ebf2ca8da3e01d3685ed35cf29b1bb6440540a27b30/serilux-0.3.1-py3-none-any.whl", hash = "sha256:59f6a118681cfdea5029f2be92ba48c43f47226052f3eb7345e84af56e413728", size = 21830, upload-time = "2026-01-03T04:42:51.085Z" },
 ]
 
 [[package]]
