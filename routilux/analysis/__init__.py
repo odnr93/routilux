@@ -31,4 +31,3 @@ __all__ = [
     "RoutineMarkdownFormatter",
     "WorkflowD2Formatter",
 ]
-
