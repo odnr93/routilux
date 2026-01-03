@@ -179,10 +179,16 @@ upload-test: check-package
 		--password $$TEST_PYPI_TOKEN
 
 docs:
-	cd docs && make html
+	@if [ -n "$(UV)" ]; then \
+		uv sync --group docs --all-extras; \
+	fi
+	cd docs && $(PYTHON_CMD) -m sphinx -M html source build
 
 html:
-	cd docs && make html
+	@if [ -n "$(UV)" ]; then \
+		uv sync --group docs --all-extras; \
+	fi
+	cd docs && $(PYTHON_CMD) -m sphinx -M html source build
 
 clean:
 	rm -rf build/
